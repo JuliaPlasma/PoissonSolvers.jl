@@ -1,7 +1,14 @@
 using PoissonSolvers
 using Documenter
+using Weave
+
+ENV["GKSwstype"] = "100"
 
 DocMeta.setdocmeta!(PoissonSolvers, :DocTestSetup, :(using PoissonSolvers); recursive=true)
+
+weave("src/poisson.jmd",
+         out_path = "src",
+         doctype = "github")
 
 makedocs(;
     modules=[PoissonSolvers],
@@ -16,6 +23,8 @@ makedocs(;
     ),
     pages=[
         "Home" => "index.md",
+        "Overview" => "poisson.md",
+        "Library" => "library.md",
     ],
 )
 

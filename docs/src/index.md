@@ -8,7 +8,3 @@ Documentation for [PoissonSolvers](https://github.com/JuliaPlasma/PoissonSolvers
 
 ```@index
 ```
-
-```@autodocs
-Modules = [PoissonSolvers]
-```
