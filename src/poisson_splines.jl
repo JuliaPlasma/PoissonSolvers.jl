@@ -87,6 +87,15 @@ function solve!(p::PoissonSolverPBSplines{DT}, x::AbstractVector{DT}, w::Abstrac
     return p
 end
 
+function solve!(p::PoissonSolverPBSplines{DT}, x::AbstractMatrix{DT}, w::AbstractMatrix{DT}) where {DT}
+    @assert size(x, 1) == 1
+    @assert size(w, 1) == 1
+
+    X = reshape(x, size(x,2))
+    W = reshape(w, size(w,2))
+
+    solve!(p, X, W)
+end
 
 function eval_density(p::PoissonSolverPBSplines{DT}, x::DT) where {DT}
     eval_PBSBasis(p.ρ, p.bspl, x)
