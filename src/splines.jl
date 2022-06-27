@@ -39,7 +39,7 @@ end
     return eval_unitPBSpline(S.p, x)
 end
 
-function eval_PBSBasis(c::Array{T}, S::PBSpline{T}, x::T) where {T}
+function eval_PBSBasis(c::AbstractArray{T}, S::PBSpline{T}, x::T) where {T}
     @assert length(c) == S.nₕ
     r::T = 0
     for j in 1:S.nₕ
@@ -48,7 +48,7 @@ function eval_PBSBasis(c::Array{T}, S::PBSpline{T}, x::T) where {T}
     return r
 end
 
-function eval_PBSBasis(c::Array{T}, S::PBSpline{T}, x::Array{T}, r = zero(x)) where {T}
+function eval_PBSBasis(c::AbstractArray{T}, S::PBSpline{T}, x::AbstractArray{T}, r = zero(x)) where {T}
     @assert length(c) == S.nₕ
     for i in eachindex(r,x)
         r[i] = eval_PBSBasis(c, S, x[i])
@@ -65,7 +65,7 @@ function eval_deriv_PBSpline(S::PBSpline{T}, i::Int, x::T) where {T}
     1/S.h * (eval_unitPBSpline(S.p-1, x) - eval_unitPBSpline(S.p-1, x-1 < 0 ? x-1+S.nₕ : x-1) )
 end
 
-function eval_deriv_PBSBasis(c::Array{T}, S::PBSpline{T}, x::T) where {T}
+function eval_deriv_PBSBasis(c::AbstractArray{T}, S::PBSpline{T}, x::T) where {T}
     @assert length(c) == S.nₕ
     r::T = 0
     for j in 1:S.nₕ
@@ -74,7 +74,7 @@ function eval_deriv_PBSBasis(c::Array{T}, S::PBSpline{T}, x::T) where {T}
     return r
 end
 
-function eval_deriv_PBSBasis(c::Array{T}, S::PBSpline{T}, x::Array{T}, r = zero(x)) where {T}
+function eval_deriv_PBSBasis(c::AbstractArray{T}, S::PBSpline{T}, x::AbstractArray{T}, r = zero(x)) where {T}
     for i in eachindex(x)
         r[i] = eval_deriv_PBSBasis(c, S, x[i])
     end
@@ -101,7 +101,7 @@ function rhs_PBSBasis(f, S::PBSpline{T}, q = S.p+1, rhs = zeros(T, S.nₕ)) wher
     return rhs
 end
 
-function rhs_particles_PBSBasis(x::Vector{T}, w::Vector{T}, S::PBSpline{T}, rhs = zeros(T, S.nₕ)) where {T}
+function rhs_particles_PBSBasis(x::AbstractVector{T}, w::AbstractVector{T}, S::PBSpline{T}, rhs = zeros(T, S.nₕ)) where {T}
     for i in eachindex(rhs)
         rhs[i] = 0
         for j in eachindex(w,x)
