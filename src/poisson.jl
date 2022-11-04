@@ -57,9 +57,19 @@ function eval_potential!(y::AbstractVector{DT}, p::PoissonSolver{DT}, x::Abstrac
     return y
 end
 
-function eval_field!(y::AbstractVector{DT}, p::PoissonSolver{DT}, x::AbstractVector{DT}) where {DT}
+function eval_field!(y::AbstractVector, p::PoissonSolver, x::AbstractVector)
     for i in eachindex(x,y)
         y[i] = eval_field(p,x[i])
     end
     return y
+end
+
+function eval_field!(y::AbstractMatrix, p::PoissonSolver, x::AbstractMatrix)
+    @assert size(x, 1) == 1
+    @assert size(y, 1) == 1
+
+    X = reshape(x, size(x,2))
+    Y = reshape(y, size(y,2))
+
+    eval_field!(Y, p, X)
 end
