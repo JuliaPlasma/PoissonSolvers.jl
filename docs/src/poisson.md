@@ -5,7 +5,7 @@ CurrentModule = PoissonSolvers
 # Poisson Solvers
 
 
-```julia
+```@example 1
 using Distributions
 using Plots
 using PoissonSolvers
@@ -27,41 +27,41 @@ plot(x, y; xlims = (0,1), xlabel = "x", ylabel = "n", legend = :none)
 
 ## FFT Solver
 
-```julia
+```@example 1
 p = PoissonSolverFFT((0.0, 1.0), 32)
 solve!(p, xp, wp);
 ```
 
 
-```julia
+```@example 1
 plot(x, eval_density(p, x); xlims = (0,1), xlabel = "x", ylabel = "ρ(x)", legend = :none)
 ```
 
-```julia
+```@example 1
 plot(x, eval_potential(p, x); xlims = (0,1), xlabel = "x", ylabel = "ϕ(x)", legend = :none)
 ```
 
-```julia
+```@example 1
 plot(x, eval_field(p, x); xlims = (0,1), xlabel = "x", ylabel = "E(x)", legend = :none)
 ```
 
 
 ## B-Spline Solver
 
-```julia
+```@example 1
 p = PoissonSolverPBSplines((0.0, 1.0), 3, 32)
 solve!(p, xp, wp);
 ```
 
 
-```julia
+```@example 1
 plot(x, eval_density(p, x); xlims = (0,1), xlabel = "x", ylabel = "ρ(x)", legend = :none)
 ```
 
-```julia
+```@example 1
 plot(x, eval_potential(p, x); xlims = (0,1), xlabel = "x", ylabel = "ϕ(x)", legend = :none)
 ```
 
-```julia
+```@example 1
 plot(x, eval_field(p, x); xlims = (0,1), xlabel = "x", ylabel = "E(x)", legend = :none)
 ```
