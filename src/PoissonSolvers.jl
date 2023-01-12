@@ -17,4 +17,8 @@ include("poisson_splines.jl")
 export PoissonSolverPBSplines
 
 
+include("poisson_bsplinekit.jl")
+
+export PoissonSolverBSplineKit
+
 end
