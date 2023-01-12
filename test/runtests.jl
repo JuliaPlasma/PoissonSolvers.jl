@@ -2,5 +2,7 @@ using PoissonSolvers
 using Test
 
 @testset "PoissonSolvers.jl" begin
-    # Write your tests here.
+    @testset "FFT Solvers" begin
+        include("fft_tests.jl")
+    end
 end
