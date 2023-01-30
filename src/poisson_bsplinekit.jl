@@ -4,99 +4,90 @@ using LinearAlgebra
 using SparseArrays
 
 
-struct PoissonSolverBSplineKit{DT<:Real,ST} <: PoissonSolver{DT}
-    p::Int
-    domain::Tuple{DT,DT}
+function PeriodicBasisBSplineKit(domain, order, n)
+    knots = range(domain[begin], domain[end], n + 1)
+    PeriodicBSplineBasis(BSplineOrder(order), knots)
+end
 
-    knots::Vector{DT}
+
+PoissonSolution(basis::AbstractBSplineBasis, coeffs::AbstractVector) = Spline(basis, coeffs)
+
+function evalsolution(basis::AbstractBSplineBasis, coeffs::AbstractVector, x::Real)
+    ϕ = Spline(basis, coeffs)
+    ϕ(x)
+end
+
+
+
+struct PoissonSolverBSplineKit{DT<:Real, ST} <: PoissonSolver{DT}
     basis::ST
 
     M::LinearAlgebra.Hermitian{DT,SparseArrays.SparseMatrixCSC{DT,Int}}
     S::LinearAlgebra.Hermitian{DT,SparseArrays.SparseMatrixCSC{DT,Int}}
 
-    P::Matrix{DT}
-    R::Matrix{DT}
-
     Mfac::LinearAlgebra.Cholesky{DT,SparseArrays.SparseMatrixCSC{DT,Int}}
     Sfac::LinearAlgebra.Cholesky{DT,SparseArrays.Matrix{DT}}
 
-    ρ::Vector{DT}
-    ϕ::Vector{DT}
-    rhs::Vector{DT}
+    P::Matrix{DT}
+    R::Matrix{DT}
 
-    function PoissonSolverBSplineKit(domain::Tuple{DT,DT}, order::Int, n::Int) where {DT}
-        knots = range(domain[begin], domain[end], n + 1)
-
-        B = PeriodicBSplineBasis(BSplineOrder(order), knots)
-        M = galerkin_matrix(B)
-        S = galerkin_matrix(B, (Derivative(1), Derivative(1)))
-
-        A = ones(n)
-        R = A * A' / (A' * A)
-        P = Matrix(I, n, n) .- R
+    function PoissonSolverBSplineKit(basis)
+        M = galerkin_matrix(basis)
+        S = galerkin_matrix(basis, (Derivative(1), Derivative(1)))
 
         Mfac = cholesky!(M)
-        Sfac = cholesky!(S .+ R)
 
-        new{DT,typeof(B)}(order, domain, knots, B, M, S, P, R, Mfac, Sfac, zeros(DT, n), zeros(DT, n), zeros(DT, n))
+        if typeof(basis) <: PeriodicBSplineBasis
+            n = length(basis)
+            A = ones(n)
+            R = A * A' / (A' * A)
+            P = Matrix(I, n, n) .- R
+
+            Sfac = cholesky!(S .+ R)
+
+            new{eltype(M), typeof(basis)}(basis, M, S, Mfac, Sfac, P, R)
+        else
+            Sfac = cholesky!(S)
+
+            new{eltype(M), typeof(basis)}(basis, M, S, Mfac, Sfac)
+        end
     end
 end
 
+PoissonSolver(basis::AbstractBSplineBasis) = PoissonSolverBSplineKit(basis)
+
+knots(p::PoissonSolverBSplineKit) = BSplineKit.knots(p.basis)
+order(p::PoissonSolverBSplineKit) = BSplineKit.order(p.basis)
 
 Base.length(p::PoissonSolverBSplineKit) = length(p.basis)
 
+isperiodic(b::AbstractBSplineBasis) = false
+isperiodic(b::PeriodicBSplineBasis) = true
+isperiodic(p::PoissonSolverBSplineKit) = isperiodic(p.basis)
 
-# compute RHS of L2 projection of the particle samples
-function density!(p::PoissonSolverBSplineKit, points, weights)
-    b = Splines.PeriodicVector(p.rhs)
-    b .= 0
 
-    for (x, w) in zip(points, weights)
-        ilast, bs = p.basis(x)  # same as `evaluate_all`
-        # Iterate over evaluated basis functions.
-        # The indices of the evaluated basis functions are ilast:-1:(ilast - k + 1),
-        # where k is the spline order.
-        for (δi, bi) ∈ pairs(bs)
-            i = ilast + 1 - δi
-            b[i] += w * bi
-        end
+function solve!(result::AbstractVector, p::PoissonSolverBSplineKit, rhs::AbstractVector)
+    if isperiodic(p)
+        ldiv!(result, p.Sfac, p.P * rhs)
+    else
+        ldiv!(result, p.Sfac, rhs)
     end
-
-    return p
+    return result
 end
 
-function solve!(p::PoissonSolverBSplineKit, rhs::AbstractVector)
-    ldiv!(p.ϕ, p.Sfac, rhs)
-    return p
+function solve!(result::AbstractVector, p::PoissonSolverBSplineKit, rhs::Base.Callable)
+    solve!(result, p, galerkin_projection(rhs, p.basis))
 end
 
-function solve!(p::PoissonSolverBSplineKit, x::AbstractVector, w::AbstractVector)
-    density!(p, x, w)
-    solve!(p, - p.P * p.rhs)
-    ldiv!(p.ρ, p.Mfac, p.rhs)
+
+function solve(p::PoissonSolverBSplineKit, rhs::AbstractVector)
+    if isperiodic(p)
+        return p.Sfac \ p.P * rhs
+    else
+        return p.Sfac \ rhs
+    end
 end
 
-function solve!(p::PoissonSolverBSplineKit, x::AbstractMatrix, w::AbstractMatrix)
-    @assert size(x, 1) == 1
-    @assert size(w, 1) == 1
-
-    X = reshape(x, size(x, 2))
-    W = reshape(w, size(w, 2))
-
-    solve!(p, X, W)
-end
-
-function eval_density(p::PoissonSolverBSplineKit, x::Real)
-    ρ = Spline(p.basis, p.ρ)
-    ρ(x)
-end
-
-function eval_potential(p::PoissonSolverBSplineKit, x::Real)
-    ϕ = Spline(p.basis, p.ϕ)
-    ϕ(x)
-end
-
-function eval_field(p::PoissonSolverBSplineKit, x::Real)
-    E = Derivative(1) * Spline(p.basis, p.ϕ)
-    E(x)
+function solve(p::PoissonSolverBSplineKit, rhs::Base.Callable)
+    solve(p, galerkin_projection(rhs, p.basis))
 end

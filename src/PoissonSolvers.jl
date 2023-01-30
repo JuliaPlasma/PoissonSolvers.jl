@@ -1,24 +1,30 @@
 module PoissonSolvers
 
+import BSplineKit: Derivative
+
+
+export Derivative
+
+
 include("poisson.jl")
 
 export PoissonSolver
-export solve!, eval_density, eval_potential, eval_field
+export solve!, solve
+
+
+include("potential.jl")
+
+export Potential
 
 
 include("poisson_fft.jl")
 
-export PoissonSolverFFT
-
-
-include("splines.jl")
-include("poisson_splines.jl")
-
-export PoissonSolverPBSplines
+export FFTWBasis
+export PoissonSolverFFT, PeriodicBasisFFT
 
 
 include("poisson_bsplinekit.jl")
 
-export PoissonSolverBSplineKit
+export PoissonSolverBSplineKit, PeriodicBasisBSplineKit
 
 end
