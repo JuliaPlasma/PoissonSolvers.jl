@@ -20,8 +20,11 @@ s = PoissonSolverBSplineKit(b)
 φ = solve(s, rhs)
 p = Potential(b, rhs)
 
+# @test s == PoissonSolver(b)
+
 @test evalsolution(b, φ, x) ≈ ϕ  atol = 1e-3
 @test evalsolution(b, φ, x) == p(x)
+@test φ == p.coefficients
 
 
 
@@ -37,5 +40,8 @@ s = PoissonSolverBSplineKit(b)
 φ = solve(s, rhs)
 p = Potential(b, rhs)
 
+# @test s == PoissonSolver(b)
+
 @test evalsolution(b, φ, x) ≈ ϕ  atol = 1e-3
 @test evalsolution(b, φ, x) == p(x)
+@test φ == p.coefficients

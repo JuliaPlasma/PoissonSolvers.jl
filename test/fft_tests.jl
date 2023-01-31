@@ -9,14 +9,16 @@ sol(x) = + sin(x)
 rhs(x) = - sin(x)
 
 b = FFTWBasis(domain, ngrid)
-p = PoissonSolverFFT(b)
+s = PoissonSolverFFT(b)
 ρ = rhs.(b.xgrid[1:end-1])
 ϕ = sol.(b.xgrid[1:end-1])
-φ = zero(ϕ)
+φ = solve(s, ρ)
+p = Potential(b, rhs)
 
-solve!(φ, p, ρ)
+@test s == PoissonSolver(b)
 
-@test ϕ ≈ φ
+@test φ ≈ ϕ
+@test φ == p.coefficients
 
 
 domain = (0.0, 1.0)
@@ -25,11 +27,13 @@ sol(x) = + sin(2π * x)
 rhs(x) = - 4π^2 * sin(2π * x)
 
 b = FFTWBasis(domain, ngrid)
-p = PoissonSolverFFT(b)
+s = PoissonSolverFFT(b)
 ρ = rhs.(b.xgrid[1:end-1])
 ϕ = sol.(b.xgrid[1:end-1])
-φ = zero(ϕ)
+φ = solve(s, ρ)
+p = Potential(b, rhs)
 
-solve!(φ, p, ρ)
+@test s == PoissonSolver(b)
 
-@test ϕ ≈ φ
+@test φ ≈ ϕ
+@test φ == p.coefficients

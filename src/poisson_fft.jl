@@ -64,6 +64,8 @@ end
 
 Base.length(p::PoissonSolverFFT) = length(p.basis.xgrid) - 1
 
+PoissonSolver(basis::FFTWBasis) = PoissonSolverFFT(basis)
+
 function solve!(coeffs::AbstractVector, p::PoissonSolverFFT, rhs::AbstractVector)
     ρ̂ = rfft(rhs)
     k² = [(i - 1)^2 for i in eachindex(ρ̂)]
@@ -74,3 +76,14 @@ function solve!(coeffs::AbstractVector, p::PoissonSolverFFT, rhs::AbstractVector
     return coeffs
 end
 
+function solve!(coeffs::AbstractVector, p::PoissonSolverFFT, rhs::Base.Callable)
+    solve!(coeffs, p, rhs.(p.basis.xgrid[1:end-1]))
+end
+
+function solve(p::PoissonSolverFFT, rhs::AbstractVector)
+    solve!(zero(rhs), p, rhs)
+end
+
+function solve(p::PoissonSolverFFT, rhs::Base.Callable)
+    solve(p, rhs.(p.basis.xgrid[1:end-1]))
+end
