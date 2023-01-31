@@ -4,64 +4,61 @@ CurrentModule = PoissonSolvers
 
 # Poisson Solvers
 
+Solve
+```math
+- \Delta \phi(x) = f(x)
+```
+
 
 ```@example 1
-using Distributions
 using Plots
 using PoissonSolvers
-using Random
-using StatsBase
 
-np = 10000
-xp = zeros(np)
-wp = ones(np) ./ np
-rand!(MersenneTwister(0), Normal(0.5, 0.1), xp)
+sol(x) = sin(π*x) * (1-x^2)
+der(x) = π * cos(π*x) * (1-x^2) - 2 * x * sin(π*x)
+rhs(x) = 4π * x * cos(π*x) + 2 * sin(π*x) + π^2 * (1-x^2) * sin(π*x)
 
-x = LinRange(0, 1, 100)
-y = fit(Histogram, xp, x).weights ./ length(x)
-x = x[1:end-1] .+ (x[2] - x[1]) / 2
+domain = (-1., +1.)
 
-plot(x, y; xlims = (0,1), xlabel = "x", ylabel = "n", legend = :none)
+x = LinRange(domain[begin], domain[end], 100)
 ```
 
 
 ## FFT Solver
 
 ```@example 1
-p = PoissonSolverFFT((0.0, 1.0), 32)
-solve!(p, xp, wp);
-```
-
-
-```@example 1
-plot(x, eval_density(p, x); xlims = (0,1), xlabel = "x", ylabel = "ρ(x)", legend = :none)
+b = FFTWBasis(domain, 256)
+p = Potential(b, rhs)
 ```
 
 ```@example 1
-plot(x, eval_potential(p, x); xlims = (0,1), xlabel = "x", ylabel = "ϕ(x)", legend = :none)
+plot(xlabel = "x", ylabel = "ϕ(x)")
+plot!(x, p.(x); xlims = domain, label = "Solution")
+plot!(x, sol.(x); xlims = domain, label = "Reference")
 ```
 
 ```@example 1
-plot(x, eval_field(p, x); xlims = (0,1), xlabel = "x", ylabel = "E(x)", legend = :none)
+plot(xlabel = "x", ylabel = "ϕ'(x)")
+plot!(x, p.(x, Derivative(1)); xlims = domain, label = "Derivative")
+plot!(x, der.(x); xlims = domain, label = "Reference")
 ```
 
 
 ## B-Spline Solver
 
 ```@example 1
-p = PoissonSolverPBSplines((0.0, 1.0), 3, 32)
-solve!(p, xp, wp);
-```
-
-
-```@example 1
-plot(x, eval_density(p, x); xlims = (0,1), xlabel = "x", ylabel = "ρ(x)", legend = :none)
+b = PeriodicBasisBSplineKit(domain, 3, 32)
+p = Potential(b, rhs)
 ```
 
 ```@example 1
-plot(x, eval_potential(p, x); xlims = (0,1), xlabel = "x", ylabel = "ϕ(x)", legend = :none)
+plot(xlabel = "x", ylabel = "ϕ(x)")
+plot!(x, p.(x); xlims = domain, label = "Solution")
+plot!(x, sol.(x); xlims = domain, label = "Reference")
 ```
 
 ```@example 1
-plot(x, eval_field(p, x); xlims = (0,1), xlabel = "x", ylabel = "E(x)", legend = :none)
+plot(xlabel = "x", ylabel = "ϕ'(x)")
+plot!(x, p.(x, Derivative(1)); xlims = domain, label = "Derivative")
+plot!(x, der.(x); xlims = domain, label = "Reference")
 ```
