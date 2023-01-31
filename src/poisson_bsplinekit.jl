@@ -1,7 +1,8 @@
 
 using BSplineKit
+using FFTW
 using LinearAlgebra
-using SparseArrays
+using ToeplitzMatrices
 
 
 function PeriodicBasisBSplineKit(domain, order, n)
@@ -19,37 +20,43 @@ end
 
 
 
-struct PoissonSolverBSplineKit{DT<:Real, ST} <: PoissonSolver{DT}
+struct PoissonSolverBSplineKit{DT<:Real, CT<:Complex, ST} <: PoissonSolver{DT}
     basis::ST
 
-    M::LinearAlgebra.Hermitian{DT,SparseArrays.SparseMatrixCSC{DT,Int}}
-    S::LinearAlgebra.Hermitian{DT,SparseArrays.SparseMatrixCSC{DT,Int}}
+    M::Circulant{DT}
+    S::Circulant{DT}
 
-    Mfac::LinearAlgebra.Cholesky{DT,SparseArrays.SparseMatrixCSC{DT,Int}}
-    Sfac::LinearAlgebra.Cholesky{DT,SparseArrays.Matrix{DT}}
+    Mfac::ToeplitzMatrices.ToeplitzFactorization{DT, Circulant{DT}, CT, FFTW.cFFTWPlan{CT, -1, true, 1, UnitRange{Int}}}
+    Sfac::ToeplitzMatrices.ToeplitzFactorization{DT, Circulant{DT}, CT, FFTW.cFFTWPlan{CT, -1, true, 1, UnitRange{Int}}}
 
-    P::Matrix{DT}
-    R::Matrix{DT}
+    P::Circulant{DT}
+    R::Circulant{DT}
 
     function PoissonSolverBSplineKit(basis)
         M = galerkin_matrix(basis)
         S = galerkin_matrix(basis, (Derivative(1), Derivative(1)))
 
-        Mfac = cholesky!(M)
+        Mcirc = Circulant(M[1,:])
+        Scirc = Circulant(S[1,:])
+
+        Mfac = factorize(Mcirc)
 
         if typeof(basis) <: PeriodicBSplineBasis
             n = length(basis)
             A = ones(n)
             R = A * A' / (A' * A)
             P = Matrix(I, n, n) .- R
+            
+            Rcirc = Circulant(R[1,:])
+            Pcirc = Circulant(P[1,:])
 
-            Sfac = cholesky!(S .+ R)
+            Sfac = factorize(Scirc + Rcirc)
 
-            new{eltype(M), typeof(basis)}(basis, M, S, Mfac, Sfac, P, R)
+            new{eltype(M), complex(eltype(M)), typeof(basis)}(basis, Mcirc, Scirc, Mfac, Sfac, Pcirc, Rcirc)
         else
-            Sfac = cholesky!(S)
+            Sfac = factorize(Scirc)
 
-            new{eltype(M), typeof(basis)}(basis, M, S, Mfac, Sfac)
+            new{eltype(M), complex(eltype(M)), typeof(basis)}(basis, Mcirc, Scirc, Mfac, Sfac)
         end
     end
 end
@@ -68,9 +75,11 @@ isperiodic(p::PoissonSolverBSplineKit) = isperiodic(p.basis)
 
 function solve!(result::AbstractVector, p::PoissonSolverBSplineKit, rhs::AbstractVector)
     if isperiodic(p)
-        ldiv!(result, p.Sfac, p.P * rhs)
+        # ldiv!(result, p.Sfac, p.P * rhs)
+        result .= p.Sfac \ (p.P * rhs)
     else
-        ldiv!(result, p.Sfac, rhs)
+        # ldiv!(result, p.Sfac, rhs)
+        result .= p.Sfac \ rhs
     end
     return result
 end
@@ -82,7 +91,7 @@ end
 
 function solve(p::PoissonSolverBSplineKit, rhs::AbstractVector)
     if isperiodic(p)
-        return p.Sfac \ p.P * rhs
+        return p.Sfac \ (p.P * rhs)
     else
         return p.Sfac \ rhs
     end
