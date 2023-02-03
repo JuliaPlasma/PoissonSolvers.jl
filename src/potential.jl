@@ -14,6 +14,8 @@ struct Potential{BT, CT <: AbstractVector, PT, ST <: PoissonSolver}
     end
 end
 
+Potential(basis) = Potential(basis, zeros(length(basis)))
+
 (p::Potential)(x::Number) = p.potential(x)
 (p::Potential)(x::AbstractArray) = p.potential.(x)
 
