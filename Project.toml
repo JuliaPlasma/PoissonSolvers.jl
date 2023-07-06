@@ -12,7 +12,7 @@ SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
 ToeplitzMatrices = "c751599d-da0a-543b-9d20-d0a503d91d24"
 
 [compat]
-BSplineKit = "0.14, 0.16"
+BSplineKit = "0.14, 0.15, 0.16"
 FFTW = "1"
 FastGaussQuadrature = "0.4, 0.5"
 ToeplitzMatrices = "0.8"
