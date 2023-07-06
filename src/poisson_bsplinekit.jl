@@ -26,8 +26,8 @@ struct PoissonSolverBSplineKit{DT<:Real, CT<:Complex, ST} <: PoissonSolver{DT}
     M::Circulant{DT}
     S::Circulant{DT}
 
-    Mfac::ToeplitzMatrices.ToeplitzFactorization{DT, Circulant{DT}, CT, FFTW.cFFTWPlan{CT, -1, true, 1, UnitRange{Int}}}
-    Sfac::ToeplitzMatrices.ToeplitzFactorization{DT, Circulant{DT}, CT, FFTW.cFFTWPlan{CT, -1, true, 1, UnitRange{Int}}}
+    Mfac::ToeplitzMatrices.ToeplitzFactorization{DT, Circulant{DT}, CT, FFTW.cFFTWPlan{CT, -1, true, 1, Tuple{Int}}}
+    Sfac::ToeplitzMatrices.ToeplitzFactorization{DT, Circulant{DT}, CT, FFTW.cFFTWPlan{CT, -1, true, 1, Tuple{Int}}}
 
     P::Circulant{DT}
     R::Circulant{DT}
@@ -40,6 +40,8 @@ struct PoissonSolverBSplineKit{DT<:Real, CT<:Complex, ST} <: PoissonSolver{DT}
         Scirc = Circulant(S[1,:])
 
         Mfac = factorize(Mcirc)
+
+        println(typeof(Mfac))
 
         if typeof(basis) <: PeriodicBSplineBasis
             n = length(basis)
