@@ -2,6 +2,7 @@
 using BSplineKit
 using FFTW
 using LinearAlgebra
+using SparseArrays
 using ToeplitzMatrices
 
 
@@ -26,8 +27,8 @@ struct PoissonSolverBSplineKit{DT<:Real, CT<:Complex, ST} <: PoissonSolver{DT}
     M::Circulant{DT}
     S::Circulant{DT}
 
-    Mfac::ToeplitzMatrices.ToeplitzFactorization{DT, Circulant{DT}, CT, FFTW.cFFTWPlan{CT, -1, true, 1, Tuple{Int}}}
-    Sfac::ToeplitzMatrices.ToeplitzFactorization{DT, Circulant{DT}, CT, FFTW.cFFTWPlan{CT, -1, true, 1, Tuple{Int}}}
+    Mfac::ToeplitzMatrices.ToeplitzFactorization{DT, Circulant{DT, SparseArrays.SparseVector{DT, Int}}, CT, FFTW.cFFTWPlan{CT, -1, true, 1, Tuple{Int}}}
+    Sfac::ToeplitzMatrices.ToeplitzFactorization{DT, Circulant{DT, SparseArrays.SparseVector{DT, Int}}, CT, FFTW.cFFTWPlan{CT, -1, true, 1, Tuple{Int}}}
 
     P::Circulant{DT}
     R::Circulant{DT}
