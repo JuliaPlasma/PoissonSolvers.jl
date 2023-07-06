@@ -11,7 +11,7 @@ LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 ToeplitzMatrices = "c751599d-da0a-543b-9d20-d0a503d91d24"
 
 [compat]
-BSplineKit = "0.14"
+BSplineKit = "0.14, 0.15, 0.16"
 FFTW = "1"
 FastGaussQuadrature = "0.4, 0.5"
 ToeplitzMatrices = "0.7"
