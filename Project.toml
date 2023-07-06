@@ -14,7 +14,7 @@ ToeplitzMatrices = "c751599d-da0a-543b-9d20-d0a503d91d24"
 BSplineKit = "0.14"
 FFTW = "1"
 FastGaussQuadrature = "0.4, 0.5"
-ToeplitzMatrices = "0.7"
+ToeplitzMatrices = "0.7, 0.8"
 julia = "1.8"
 
 [extras]
