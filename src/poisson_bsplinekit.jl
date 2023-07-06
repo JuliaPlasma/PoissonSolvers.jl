@@ -42,6 +42,8 @@ struct PoissonSolverBSplineKit{DT<:Real, CT<:Complex, ST} <: PoissonSolver{DT}
 
         Mfac = factorize(Mcirc)
 
+        println(typeof(Mfac))
+
         if typeof(basis) <: PeriodicBSplineBasis
             n = length(basis)
             A = ones(n)
