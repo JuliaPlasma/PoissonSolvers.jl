@@ -24,6 +24,7 @@ makedocs(;
 )
 
 deploydocs(;
-    repo="github.com/JuliaPlasma/PoissonSolvers.jl",
-    devbranch="main",
+    repo   = "github.com/JuliaPlasma/PoissonSolvers.jl",
+    devurl = "latest",
+    devbranch = "main",
 )
