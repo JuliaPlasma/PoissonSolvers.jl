@@ -1,7 +1,7 @@
 name = "PoissonSolvers"
 uuid = "8f9e8900-be71-40de-a258-603fdc860a2d"
 authors = ["Michael Kraus"]
-version = "0.3.2"
+version = "0.3.3"
 
 [deps]
 BSplineKit = "093aae92-e908-43d7-9660-e50ee39d5a0a"
