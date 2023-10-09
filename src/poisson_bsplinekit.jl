@@ -1,4 +1,3 @@
-
 using BSplineKit
 using FFTW
 using LinearAlgebra
@@ -6,8 +5,8 @@ using SparseArrays
 using ToeplitzMatrices
 
 
-function PeriodicBasisBSplineKit(domain, order, n)
-    knots = range(domain[begin], domain[end], n + 1)
+function PeriodicBasisBSplineKit(domain, order, nknots)
+    knots = range(domain[begin], domain[end], nknots + 1)
     PeriodicBSplineBasis(BSplineOrder(order), knots)
 end
 
