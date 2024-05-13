@@ -6,7 +6,7 @@ struct Potential{BT, CT <: AbstractVector, PT, ST <: PoissonSolver}
     solver::ST
     rhs::CT
 
-    function Potential(basis, init_rhs) where {DT}
+    function Potential(basis, init_rhs)
         solver = PoissonSolver(basis)
         coeffs = solve(solver, init_rhs)
         potential = PoissonSolution(basis, coeffs)
