@@ -1,5 +1,6 @@
 using PoissonSolvers
 using PoissonSolvers: nearest_index, nearest_indices
+using Test
 
 ngrid = 64
 

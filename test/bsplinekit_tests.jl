@@ -1,6 +1,7 @@
 using BSplineKit
 using PoissonSolvers
 using PoissonSolvers: evalsolution
+using Test
 
 nknot = 32
 order = 5
