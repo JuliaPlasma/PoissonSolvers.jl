@@ -4,12 +4,10 @@ using LinearAlgebra
 using SparseArrays
 using ToeplitzMatrices
 
-
 function PeriodicBasisBSplineKit(domain, order, nknots)
     knots = range(domain[begin], domain[end], nknots + 1)
     PeriodicBSplineBasis(BSplineOrder(order), knots)
 end
-
 
 PoissonSolution(basis::AbstractBSplineBasis, coeffs::AbstractVector) = Spline(basis, coeffs)
 
@@ -18,16 +16,18 @@ function evalsolution(basis::AbstractBSplineBasis, coeffs::AbstractVector, x::Re
     ϕ(x)
 end
 
-
-
-struct PoissonSolverBSplineKit{DT<:Real, CT<:Complex, ST} <: PoissonSolver{DT}
+struct PoissonSolverBSplineKit{DT <: Real, CT <: Complex, ST} <: PoissonSolver{DT}
     basis::ST
 
     M::Circulant{DT}
     S::Circulant{DT}
 
-    Mfac::ToeplitzMatrices.ToeplitzFactorization{DT, Circulant{DT, SparseArrays.SparseVector{DT, Int}}, CT, FFTW.cFFTWPlan{CT, -1, true, 1, Tuple{Int}}}
-    Sfac::ToeplitzMatrices.ToeplitzFactorization{DT, Circulant{DT, SparseArrays.SparseVector{DT, Int}}, CT, FFTW.cFFTWPlan{CT, -1, true, 1, Tuple{Int}}}
+    Mfac::ToeplitzMatrices.ToeplitzFactorization{
+        DT, Circulant{DT, SparseArrays.SparseVector{DT, Int}},
+        CT, FFTW.cFFTWPlan{CT, -1, true, 1, Tuple{Int}}}
+    Sfac::ToeplitzMatrices.ToeplitzFactorization{
+        DT, Circulant{DT, SparseArrays.SparseVector{DT, Int}},
+        CT, FFTW.cFFTWPlan{CT, -1, true, 1, Tuple{Int}}}
 
     P::Circulant{DT}
     R::Circulant{DT}
@@ -36,8 +36,8 @@ struct PoissonSolverBSplineKit{DT<:Real, CT<:Complex, ST} <: PoissonSolver{DT}
         M = galerkin_matrix(basis)
         S = galerkin_matrix(basis, (Derivative(1), Derivative(1)))
 
-        Mcirc = Circulant(M[1,:])
-        Scirc = Circulant(S[1,:])
+        Mcirc = Circulant(M[1, :])
+        Scirc = Circulant(S[1, :])
 
         Mfac = factorize(Mcirc)
 
@@ -46,17 +46,19 @@ struct PoissonSolverBSplineKit{DT<:Real, CT<:Complex, ST} <: PoissonSolver{DT}
             A = ones(n)
             R = A * A' / (A' * A)
             P = Matrix(I, n, n) .- R
-            
-            Rcirc = Circulant(R[1,:])
-            Pcirc = Circulant(P[1,:])
+
+            Rcirc = Circulant(R[1, :])
+            Pcirc = Circulant(P[1, :])
 
             Sfac = factorize(Scirc + Rcirc)
 
-            new{eltype(M), complex(eltype(M)), typeof(basis)}(basis, Mcirc, Scirc, Mfac, Sfac, Pcirc, Rcirc)
+            new{eltype(M), complex(eltype(M)), typeof(basis)}(
+                basis, Mcirc, Scirc, Mfac, Sfac, Pcirc, Rcirc)
         else
             Sfac = factorize(Scirc)
 
-            new{eltype(M), complex(eltype(M)), typeof(basis)}(basis, Mcirc, Scirc, Mfac, Sfac)
+            new{eltype(M), complex(eltype(M)), typeof(basis)}(
+                basis, Mcirc, Scirc, Mfac, Sfac)
         end
     end
 end
@@ -72,7 +74,6 @@ isperiodic(b::AbstractBSplineBasis) = false
 isperiodic(b::PeriodicBSplineBasis) = true
 isperiodic(p::PoissonSolverBSplineKit) = isperiodic(p.basis)
 
-
 function solve!(result::AbstractVector, p::PoissonSolverBSplineKit, rhs::AbstractVector)
     if isperiodic(p)
         # ldiv!(result, p.Sfac, p.P * rhs)
@@ -87,7 +88,6 @@ end
 function solve!(result::AbstractVector, p::PoissonSolverBSplineKit, rhs::Base.Callable)
     solve!(result, p, galerkin_projection(rhs, p.basis))
 end
-
 
 function solve(p::PoissonSolverBSplineKit, rhs::AbstractVector)
     if isperiodic(p)

@@ -11,7 +11,8 @@ struct Potential{BT, CT <: AbstractVector, PT, ST <: PoissonSolver}
         coeffs = solve(solver, init_rhs)
         potential = PoissonSolution(basis, coeffs)
 
-        new{typeof(basis), typeof(coeffs), typeof(potential), typeof(solver)}(basis, coeffs, potential, solver, zero(coeffs))
+        new{typeof(basis), typeof(coeffs), typeof(potential), typeof(solver)}(
+            basis, coeffs, potential, solver, zero(coeffs))
     end
 end
 

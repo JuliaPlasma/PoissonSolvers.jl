@@ -1,7 +1,6 @@
 
 abstract type PoissonSolver{dType} end
 
-
 """
 Solves the Poisson equation for periodic boundary conditions
 
@@ -11,8 +10,6 @@ function solve!(p::PoissonSolver, x::AbstractVector, w::AbstractVector) end
 
 """
 function solve! end
-
-
 
 """
 Takes a basis and a coefficient vector and returns an appropriate object 
@@ -25,7 +22,6 @@ sol(x)
 
 """
 function PoissonSolution end
-
 
 function evalsolution(basis, coeffs, x::AbstractVector)
     [evalsolution(basis, coeffs, x_) for x_ in x]

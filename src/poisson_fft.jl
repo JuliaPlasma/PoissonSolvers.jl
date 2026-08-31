@@ -2,13 +2,11 @@
 using BSplineKit.Splines: PeriodicVector
 using FFTW
 
-
 fftmod(x, domain) = mod(x - domain[begin], domain[end] - domain[begin]) + domain[begin]
 
-
 struct FFTWBasis{DT, GT <: AbstractVector{DT}}
-    domain::Tuple{DT,DT}
-    xgrid::PeriodicVector{DT,GT}
+    domain::Tuple{DT, DT}
+    xgrid::PeriodicVector{DT, GT}
     Δx::DT
 end
 
@@ -22,7 +20,6 @@ PeriodicBasisFFTW(domain, n) = FFTWBasis(domain, n)
 
 Base.length(basis::FFTWBasis) = length(basis.xgrid) - 1
 
-
 function nearest_indices(b::FFTWBasis, x)
     i1 = floor(Int, (x - b.domain[begin]) / b.Δx) + 1
     i2 = i1 + 1
@@ -31,10 +28,10 @@ end
 
 function nearest_index(b::FFTWBasis, x)
     i1, i2 = nearest_indices(b, x)
-    i = (abs(b.xgrid[i1] - fftmod(x, b.domain)) ≤ abs(b.xgrid[i2] - fftmod(x, b.domain)) ? i1 : i2)
+    i = (abs(b.xgrid[i1] - fftmod(x, b.domain)) ≤ abs(b.xgrid[i2] - fftmod(x, b.domain)) ?
+         i1 : i2)
     return i
 end
-
 
 struct FFTWSolution{CT, BT}
     basis::BT
@@ -52,11 +49,10 @@ function evalsolution(basis::FFTWBasis, coeffs::AbstractVector, x::Real)
     ϕ(x)
 end
 
-
 struct FFTWDerivative{N, ST <: FFTWSolution}
     solution::ST
-    function FFTWDerivative{N}(solution::ST) where {N,ST}
-        new{N,ST}(solution)
+    function FFTWDerivative{N}(solution::ST) where {N, ST}
+        new{N, ST}(solution)
     end
 end
 
@@ -69,7 +65,6 @@ function (d::FFTWDerivative{1})(x::Number)
     i1, i2 = nearest_indices(d.solution.basis, x)
     return (d.solution.coefficients[i2] - d.solution.coefficients[i1]) / d.solution.basis.Δx
 end
-
 
 struct PoissonSolverFFT{DT, BT <: FFTWBasis{DT}} <: PoissonSolver{DT}
     basis::BT
@@ -84,13 +79,13 @@ function solve!(coeffs::AbstractVector, p::PoissonSolverFFT, rhs::AbstractVector
     k² = [(i - 1)^2 for i in eachindex(ρ̂)]
     ϕ̂ = ρ̂ ./ k²
     ϕ̂[1] = 0
-    ϕ̂ ./= ( 2π / (p.basis.domain[end] - p.basis.domain[begin]) )^2
+    ϕ̂ ./= (2π / (p.basis.domain[end] - p.basis.domain[begin]))^2
     coeffs .= irfft(ϕ̂, length(rhs))
     return coeffs
 end
 
 function solve!(coeffs::AbstractVector, p::PoissonSolverFFT, rhs::Base.Callable)
-    solve!(coeffs, p, rhs.(p.basis.xgrid[1:end-1]))
+    solve!(coeffs, p, rhs.(p.basis.xgrid[1:(end - 1)]))
 end
 
 function solve(p::PoissonSolverFFT, rhs::AbstractVector)
@@ -98,5 +93,5 @@ function solve(p::PoissonSolverFFT, rhs::AbstractVector)
 end
 
 function solve(p::PoissonSolverFFT, rhs::Base.Callable)
-    solve(p, rhs.(p.basis.xgrid[1:end-1]))
+    solve(p, rhs.(p.basis.xgrid[1:(end - 1)]))
 end
