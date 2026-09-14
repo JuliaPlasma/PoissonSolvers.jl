@@ -21,8 +21,8 @@ using PoissonSolvers
 
 ρ(x) = 4π^2 * sin(2π * x)
 
-basis = PeriodicBasisSpline((0.0, 1.0), 5, 32)   # order k = 5, i.e. degree 4, on 32 cells
-ϕ = Potential(basis, ρ)
+b = PeriodicBasisSpline((0.0, 1.0), 5, 32)   # order k = 5, i.e. degree 4, on 32 cells
+ϕ = Potential(b, ρ)
 
 ϕ(0.25)         # the potential
 ϕ(0.25, 1)      # its first derivative

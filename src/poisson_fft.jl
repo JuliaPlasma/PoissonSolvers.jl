@@ -69,9 +69,9 @@ end
 A derivative of an [`FFTWSolution`](@ref), as returned by `derivative`. Callable, so that
 `derivative(s).(v)` broadcasts the way `s.(v)` does, matching the spline side.
 """
-struct FFTWDerivative{ST <: FFTWSolution, DT}
+struct FFTWDerivative{ST <: FFTWSolution, OT}
     solution::ST
-    d::DT
+    d::OT
 end
 
 (ds::FFTWDerivative)(x::Number) = ds.solution(x, ds.d)

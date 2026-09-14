@@ -42,6 +42,10 @@ derivative(p::Potential, d = 1) = derivative(p.potential, d)
     rhs(p::Potential)
 
 The stored right-hand side buffer of `p`, which [`update!`](@ref) solves with by default.
+
+It is a scratch array for the caller to fill, and starts out zero: the right-hand side given to
+the constructor is solved with, not stored here. So `update!(p)` on a freshly built `p` solves
+for a zero source.
 """
 rhs(p::Potential) = p.rhs
 

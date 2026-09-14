@@ -74,12 +74,18 @@ makes it worth keeping. The record proper begins with the section below.
   struct fields `p.basis` and `p.coefficients`, matching SimpleSplines' idiom. Both were already
   stored inside the solution, so this is renaming access rather than adding storage.
 
+- **`Potential`'s first type parameter is now the solution type, not the basis type.** A method
+  dispatching on `Potential{<:SomeBasis}` no longer matches, and because it simply stops being
+  called rather than erroring, it fails silently. Dispatch on the solution or on `Potential`
+  itself instead.
+
 - **`evalsolution` is removed.** Build a `Spline(basis, coeffs)` from the components or use the
   `Potential` functor.
 
-- **`PoissonSolverSpline` no longer accepts arbitrary non-periodic bases** through a branch that
-  left two struct fields undefined and could not have worked. It takes a periodic or a Dirichlet
-  basis only.
+- **A non-periodic basis without a boundary condition now fails loudly.** The branch that took one
+  left two struct fields undefined and could not have worked. The solver is built for the periodic
+  and Dirichlet bases; handed a clamped basis it raises during construction, from the singular
+  stiffness matrix, rather than returning something unusable.
 
 - **Minimum Julia is now 1.10**, raised from the declared 1.8. 1.10 is the LTS and the floor
   across the whole tree; 1.8 was declared but never tested and would not resolve against the
