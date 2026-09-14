@@ -17,7 +17,7 @@
 #      fill-in it costs therefore buys exactly one number.
 #   3. The deflated solve reproduces the shifted one to round-off, on both representations, and
 #      returns the mean-free solution exactly rather than to within the shift's own rounding.
-#   4. Storage and construction stay O(N) rather than O(N²).
+#   4. The storage a solver holds stays O(N) rather than O(N²).
 #   5. The shift is an absolute constant while the spectrum is not, so on a domain that is not
 #      of order one it also costs two orders of condition number. The deflation has no scale to
 #      get wrong.
@@ -33,10 +33,10 @@ using Test
 const DOMAIN = (0.0, 2π)
 const ORDER = 5                        # k = p + 1, so the degree is 4
 
-basis(meshtype, n) = PeriodicBSplineBasis(meshtype(n, DOMAIN[2] - DOMAIN[1]), ORDER - 1)
+mkbasis(meshtype, n) = PeriodicBSplineBasis(meshtype(n, DOMAIN[2] - DOMAIN[1]), ORDER - 1)
 
 """The stiffness matrix of a periodic basis of `n` cells on `meshtype`."""
-stiffness(meshtype, n) = stiffness_matrix(SplineQuadrature(basis(meshtype, n)))
+stiffness(meshtype, n) = stiffness_matrix(SplineQuadrature(mkbasis(meshtype, n)))
 
 header(s) = (println(); println(s); println("-"^length(s)))
 
@@ -88,7 +88,7 @@ function the_deflation_reproduces_the_shift()
 
     for meshtype in (UniformMesh, GradedMesh), n in (32, 127)
 
-        b = basis(meshtype, n)
+        b = mkbasis(meshtype, n)
         S = stiffness(meshtype, n)
         op = mass_operator(S, b; kernel = :project)
         shifted = mass_operator(Matrix(S) .+ inv(n), b)
@@ -117,16 +117,17 @@ function the_solver_stays_linear()
     header("4. the solver stays O(N)")
 
     for n in (256, 1024, 2048)
-        b = basis(UniformMesh, n)
-        S = stiffness(UniformMesh, n)
+        b = mkbasis(UniformMesh, n)
+        q = SplineQuadrature(b)
 
-        # `S .+ inv(n)` is what the shift was written as, and it stays a SparseMatrixCSC —
-        # structurally full, so it carries a row index beside every one of the N² entries.
+        # Written as `S .+ inv(n)`, the shift stays a SparseMatrixCSC — structurally full, so it
+        # carries a row index beside every one of the N² entries. A quadrature and an operator
+        # built on it are what a solver holds, so measure the pair against the whole solver.
         deflated = Base.summarysize(PoissonSolverSpline(b))
-        shift = Base.summarysize(S .+ inv(n))
-        @printf("n=%4d  whole solver %8d B   the shifted matrix alone %9d B  (%.0f×)\n",
-            n, deflated, shift, shift / deflated)
-        @test deflated < shift
+        shifted = Base.summarysize((q, mass_operator(stiffness_matrix(q) .+ inv(n), b)))
+        @printf("n=%4d  deflated solver %8d B   shifted solver %9d B  (%.0f×)\n",
+            n, deflated, shifted, shifted / deflated)
+        @test deflated < shifted
     end
 end
 

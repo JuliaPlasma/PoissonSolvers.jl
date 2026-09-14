@@ -25,10 +25,10 @@ makes it worth keeping. The record proper begins with the section below.
 
   The rank-one shift was a scalar added to every entry, which made a banded assembly
   structurally full. At degree 4 on 2048 cells the shifted matrix alone measured
-  **67 125 416 B**, and a whole `PoissonSolverSpline` **72 551 536 B**, built in 77 ms. The
-  same solver now measures **5 426 160 B**, thirteen times smaller, and what it holds is the
-  sparse assembly: 18 432 stored entries rather than 4 194 304. Construction was O(N²) in both
-  time and storage where the assembly itself is O(N).
+  **67 125 416 B**, and a whole `PoissonSolverSpline` **72 551 536 B**. The same solver now
+  measures **5 426 160 B**, thirteen times smaller, and what it holds is the sparse assembly:
+  18 432 stored entries rather than 4 194 304. Construction was O(N²) in both time and storage
+  where the assembly itself is O(N).
 
   The shift also chose a scale it had no basis for: `inv(N)` is an absolute constant while the
   spectrum of the stiffness matrix scales with the mesh. On a domain of length 2π·10⁻³ that
@@ -42,6 +42,12 @@ makes it worth keeping. The record proper begins with the section below.
 
 - **`PoissonSolvers.regularise` and `PoissonSolvers.meanfree!` are removed.** Both were internal
   and unexported.
+
+- **`solve!` checks the lengths it was given**, and says how many degrees of freedom the solver
+  has when they disagree. The shift's broadcast used to raise that `DimensionMismatch` as a side
+  effect, so one corner changes: a result vector of the wrong length, with a right-hand side of
+  the right one, used to reach the planned transforms as `ArgumentError: FFTW plan applied to
+  wrong-size output`. It is a `DimensionMismatch` now, like every other mismatch.
 
 - **`SimpleSplines` moves from `"0.1"` to `"0.2"`**, for the `kernel` keyword.
 

@@ -62,9 +62,8 @@ the basis: an FFT for a periodic uniform basis, a banded Cholesky for a Dirichle
 allocates the load vector it samples first — see [`loadvector`](@ref).
 
 A periodic stiffness matrix is singular, since ``-\phi'' = \rho`` determines the solution only up
-to a constant. The factorisation deflates that constant rather than shifting the matrix to remove
-it, so [`solve!`](@ref) returns the mean-free solution and the matrix keeps the ``O(N)`` sparsity
-it was assembled with.
+to a constant. The factorisation deflates that constant, so [`solve!`](@ref) returns the mean-free
+solution, and what the operator holds is the assembly itself, which is ``O(N)`` sparse.
 
 A periodic factorisation holds transform scratch of its own, which is what makes that possible, so
 a periodic solver is not reentrant: two tasks must not call [`solve!`](@ref) on one of them, even
@@ -112,8 +111,9 @@ end
 
 function solve!(result::AbstractVector, p::PoissonSolverSpline, rhs::AbstractVector)
     # The transforms behind a periodic solve are planned for one length, and a wrong one reaches
-    # them as "FFTW plan applied to wrong-size array" — an ArgumentError naming a plan the caller
-    # never made. The count of degrees of freedom is what actually went wrong, so say that.
+    # them as "FFTW plan applied to wrong-size output", an ArgumentError naming a plan the caller
+    # never made; a Dirichlet one reaches its factorisation as a BoundsError. The count of degrees
+    # of freedom is what actually went wrong, so say that instead.
     length(result) == length(rhs) == length(p) || throw(DimensionMismatch(
         "the solver has $(length(p)) degrees of freedom, but the right-hand side has " *
         "$(length(rhs)) and the result $(length(result))"))
