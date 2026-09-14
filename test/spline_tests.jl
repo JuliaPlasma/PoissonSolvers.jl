@@ -93,27 +93,41 @@ end
 end
 
 @testset "type stability and allocations" begin
-    function probe()
-        basis = PeriodicBasisSpline((0.0, 1.0), 5, 32)
+    function probe(mkbasis)
+        basis = mkbasis((0.0, 1.0), 5, 32)
         solver = PoissonSolverSpline(basis)
         ρ = rand(length(solver))
         φ = similar(ρ)
         solve!(φ, solver, ρ)
         (@inferred(solve!(φ, solver, ρ)), @allocated(solve!(φ, solver, ρ)))
     end
-    result, allocated = probe()
-    @test result isa Vector{Float64}
 
-    # `Pkg.test()` forces --check-bounds=yes up to Julia 1.12, which inflates allocations; the
-    # assertion is therefore made only where bounds checking is at its default.
-    if Base.JLOptions().check_bounds == 0
-        @test allocated == 0
+    # The docstring promises an allocation-free `solve!` on both backends, so both are measured.
+    # The two reach different factorisations, and only the periodic one carries scratch.
+    for mkbasis in (PeriodicBasisSpline, DirichletBasisSpline)
+        result, allocated = probe(mkbasis)
+        @test result isa Vector{Float64}
+
+        # `Pkg.test()` forces --check-bounds=yes up to Julia 1.12, which inflates allocations; the
+        # assertion is therefore made only where bounds checking is at its default.
+        if Base.JLOptions().check_bounds == 0
+            @test allocated == 0
+        end
     end
 end
 
 @testset "rejected input" begin
     solver = PoissonSolverSpline(PeriodicBasisSpline((0.0, 1.0), 5, 32))
     @test_throws DimensionMismatch solve!(zeros(8), solver, rand(32))
+
+    # The two backends fail differently without the length check, so both are pinned. A periodic
+    # solve reaches planned transforms, which reject a wrong length themselves; a Dirichlet one
+    # reaches a banded factorisation, which reads a short right-hand side without complaint and
+    # returns an answer for it. The check is all that stands between a caller and that.
+    dirichlet = PoissonSolverSpline(DirichletBasisSpline((0.0, 1.0), 5, 32))
+    n = length(dirichlet)
+    @test_throws DimensionMismatch solve!(zeros(n), dirichlet, rand(8))
+    @test_throws DimensionMismatch solve!(zeros(8), dirichlet, rand(n))
 
     # A periodic basis of degree p needs more than p cells for the wrap to be well defined.
     @test_throws ArgumentError PeriodicBasisSpline((0.0, 1.0), 5, 3)

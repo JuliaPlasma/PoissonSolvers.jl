@@ -40,6 +40,11 @@ makes it worth keeping. The record proper begins with the section below.
   The claims above are established by `scripts/verify_kernel_projection.jl`, which is new on
   this branch and checks the deflation against the shift on both representations.
 
+  This resolves the *Open Issues* entry **A periodic spline solver stores an ``n \times n``
+  matrix**, filed upstream as
+  [SimpleSplines.jl#10](https://github.com/JuliaDEC/SimpleSplines.jl/issues/10). The entry is
+  dropped from that section below.
+
 - **`PoissonSolvers.regularise` and `PoissonSolvers.meanfree!` are removed.** Both were internal
   and unexported.
 
@@ -164,15 +169,6 @@ makes it worth keeping. The record proper begins with the section below.
   upstream: `SimpleSplines.evaluate_all!`, which takes a caller-supplied buffer, allocates nothing.
   See `scripts/measure_allocations.jl` for both figures side by side. The grid backend evaluates
   with no allocation.
-
-- **A periodic spline solver stores an ``n \times n`` matrix.** The rank-one shift that makes the
-  singular periodic stiffness matrix invertible fills in the banded matrix completely, and
-  `SimpleSplines.CirculantMass` then keeps it although it reads only one column. The shifted matrix
-  is circulant, so one column would do; `mass_operator` accepts only a materialised `AbstractMatrix`,
-  so there is no way to say that from here. Measured at order 5: 9 216 stored entries become
-  1 048 576 at 1024 cells, and a solver on 2048 cells holds 72.5 MB. Filed upstream as
-  [SimpleSplines.jl#10](https://github.com/JuliaDEC/SimpleSplines.jl/issues/10), with the fix
-  proposed there. The solver is correct and its solves are unaffected; only its memory is.
 
 - **A periodic spline solver cannot be built at `Float32`.** `SimpleSplines.CirculantMass` checks
   that the assembled mass matrix is circulant against an absolute tolerance of `1e-10`, which
