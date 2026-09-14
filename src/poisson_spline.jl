@@ -63,9 +63,10 @@ the basis: an FFT for a periodic uniform basis, a banded Cholesky for a Dirichle
 [`solve!`](@ref) allocation-free when it is given a coefficient vector. Given a function, it
 allocates the load vector it samples first — see [`loadvector`](@ref).
 
-The factorisation holds transform scratch of its own, which is what makes that possible. A solver
-is therefore not reentrant: two tasks must not call [`solve!`](@ref) on one solver, even with
-distinct result vectors. Give each task its own solver.
+A periodic factorisation holds transform scratch of its own, which is what makes that possible, so
+a periodic solver is not reentrant: two tasks must not call [`solve!`](@ref) on one of them, even
+with distinct result vectors. The Dirichlet factorisation carries no scratch and does not share
+this. Give each task its own solver rather than depending on which one it has.
 
 The basis must be periodic or Dirichlet-recombined. Any other basis represents the constants,
 which leaves the stiffness matrix singular; the constructor rejects it.

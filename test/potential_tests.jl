@@ -61,8 +61,10 @@ end
 
 @testset "the element type follows the basis" begin
     # The zero right-hand side of the single-argument constructor was Float64 whatever the basis
-    # was. On a Float32 basis that reached the transform as a Float64 vector and threw a
-    # MethodError from `mul!`, so the constructor was unusable at any other precision.
+    # was, and the two backends failed differently. The grid basis threw a MethodError from `mul!`,
+    # because the transform is built for the basis element type. The spline basis took the wider
+    # vector and returned a Float64 potential without complaint, which is why both are asserted
+    # here: the loud failure is the easy one to catch.
     for b in (FFTWBasis(Float32.((0.0, 1.0)), 64),
         DirichletBasisSpline(Float32.((0.0, 1.0)), 5, 32))
         @test eltype(b) == Float32

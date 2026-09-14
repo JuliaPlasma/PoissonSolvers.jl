@@ -54,11 +54,13 @@ makes it worth keeping. The record proper begins with the section below.
   is a new constraint rather than one that was always there unstated.
 
 - **`Potential(basis)` no longer forces `Float64`.** The zero right-hand side of the
-  single-argument constructor was built as `zeros(ndofs(b))` whatever the basis was. On a `Float32`
-  basis that reached the transform as a `Vector{Float64}` and threw a `MethodError` from `mul!`, so
-  the constructor was unusable at any precision but `Float64`. It now follows `eltype(basis)`, and
-  `Base.eltype` is defined on `FFTWBasis` — it fell back to `Any` before, while the SimpleSplines
-  bases already answered it.
+  single-argument constructor was built as `zeros(ndofs(b))` whatever the basis was, and the two
+  backends failed differently. On a `Float32` grid basis it reached the transform as a
+  `Vector{Float64}` and threw a `MethodError` from `mul!`. On a `Float32` spline basis it
+  constructed without complaint and computed the whole potential at `Float64` — the quieter fault
+  and the worse one, since nothing said the requested precision had been discarded. The right-hand
+  side now follows `eltype(basis)`, and `Base.eltype` is defined on `FFTWBasis` — it fell back to
+  `Any` before, while the SimpleSplines bases already answered it.
 
 - **The regularising shift keeps the element type of the stiffness matrix.** Written as
   `inv(size(S, 1))` the shift was a `Float64` scalar, so it promoted a `Float32` matrix and with it

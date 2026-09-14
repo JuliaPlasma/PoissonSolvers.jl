@@ -23,7 +23,8 @@ function FFTWBasis(domain, ngrid)
 end
 
 Base.length(b::FFTWBasis) = length(b.xgrid) - 1
-Base.eltype(::FFTWBasis{DT}) where {DT} = DT
+Base.eltype(::Type{<:FFTWBasis{DT}}) where {DT} = DT
+Base.eltype(b::FFTWBasis) = eltype(typeof(b))
 ndofs(b::FFTWBasis) = length(b)
 
 function nearest_indices(b::FFTWBasis, x)
