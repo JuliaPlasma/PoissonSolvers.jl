@@ -30,20 +30,23 @@ makes it worth keeping. The record proper begins with the section below.
 
 ### Bug Fixes
 
-- **`PeriodicBasisFFT` is now defined and exported**. The function existed but was named
-  `PeriodicBasisFFTW`, leaving the exported name undefined — the fault Aqua's `undefined_exports`
-  now guards against.
+- **The undefined export `PeriodicBasisFFT` is removed.** The name was exported but never defined,
+  so every use of it raised `UndefVarError` — the fault Aqua's `undefined_exports` now guards
+  against. The defined name was `PeriodicBasisFFTW`, an unexported alias, and it is removed with
+  it. `FFTWBasis` is the grid basis constructor, exported and documented.
 
 - **Derivative evaluation no longer rebuilds the basis on every call.** It was reconstructing the
   entire spline basis and coefficient vector for every evaluation (from BSplineKit's `Derivative(1)
   * spline`). Now it is a stateless lookup, which is visible to downstream code because the
   evaluation happens once per particle per stage.
 
-- **`solve!` is now allocation-free on all backends.** The spline solver was rebuilding an FFT
-  factorization on every call, and the grid solver was rebuilding FFT plans and three temporary
-  arrays. Transforms and factorizations are now constructed once when the solver is built.
-  Measured: `solve!` and `update!` allocate 0 bytes on the periodic spline, Dirichlet spline and
-  grid backends alike.
+- **`solve!` from a vector is now allocation-free on all backends.** The spline solver was
+  rebuilding an FFT factorization on every call, and the grid solver was rebuilding FFT plans and
+  three temporary arrays. Transforms and factorizations are now constructed once when the solver
+  is built. Measured: `solve!` and `update!` allocate 0 bytes on the periodic spline, Dirichlet
+  spline and grid backends alike. Solving with a *function* still allocates the right-hand side it
+  samples first — 2080 B on the periodic spline, 2832 B on the Dirichlet one and 704 B on the grid
+  at the sizes measured. Fill `rhs(p)` and call `update!(p)` where that matters.
 
 - **The grid solver's constant mode no longer divides by zero.** The k = 0 Fourier coefficient was
   computed by dividing by zero and then overwritten; the symbol now carries an exact zero there.
@@ -83,9 +86,11 @@ makes it worth keeping. The record proper begins with the section below.
   `Potential` functor.
 
 - **A non-periodic basis without a boundary condition now fails loudly.** The branch that took one
-  left two struct fields undefined and could not have worked. The solver is built for the periodic
-  and Dirichlet bases; handed a clamped basis it raises during construction, from the singular
-  stiffness matrix, rather than returning something unusable.
+  left two struct fields undefined and could not have worked. `PoissonSolverSpline` now checks the
+  basis during construction and raises an `ArgumentError` naming the cause: a basis that represents
+  the constants — the clamped basis, a Neumann recombination — has a singular stiffness matrix,
+  because ``-\phi'' = \rho`` does not determine a constant. Only the periodic basis, whose constant
+  mode the solver shifts out, and the Dirichlet basis, which has none, are accepted.
 
 - **Minimum Julia is now 1.10**, raised from the declared 1.8. 1.10 is the LTS and the floor
   across the whole tree; 1.8 was declared but never tested and would not resolve against the
@@ -100,3 +105,12 @@ makes it worth keeping. The record proper begins with the section below.
   upstream: `SimpleSplines.evaluate_all!`, which takes a caller-supplied buffer, allocates nothing.
   See `scripts/measure_allocations.jl` for both figures side by side. The grid backend evaluates
   with no allocation.
+
+- **A periodic spline solver stores an ``n \times n`` matrix.** The rank-one shift that makes the
+  singular periodic stiffness matrix invertible fills in the banded matrix completely, and
+  `SimpleSplines.CirculantMass` then keeps it although it reads only one column. The shifted matrix
+  is circulant, so one column would do; `mass_operator` accepts only a materialised `AbstractMatrix`,
+  so there is no way to say that from here. Measured at order 5: 9 216 stored entries become
+  1 048 576 at 1024 cells, and a solver on 2048 cells holds 72.5 MB. Filed upstream as
+  [SimpleSplines.jl#10](https://github.com/JuliaDEC/SimpleSplines.jl/issues/10), with the fix
+  proposed there. The solver is correct and its solves are unaffected; only its memory is.

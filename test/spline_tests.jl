@@ -117,4 +117,10 @@ end
 
     # A periodic basis of degree p needs more than p cells for the wrap to be well defined.
     @test_throws ArgumentError PeriodicBasisSpline((0.0, 1.0), 5, 3)
+
+    # A basis that represents the constants has a singular stiffness matrix, and the solver says
+    # so itself rather than letting the factorisation report it against the mass matrix.
+    mesh = UniformMesh(32, (0.0, 1.0))
+    @test_throws ArgumentError PoissonSolverSpline(BSplineBasis(mesh, 4))
+    @test_throws ArgumentError PoissonSolverSpline(BSplineBasis(mesh, 4, Neumann()))
 end

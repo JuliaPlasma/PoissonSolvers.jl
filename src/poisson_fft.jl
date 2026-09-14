@@ -22,8 +22,6 @@ function FFTWBasis(domain, ngrid)
     FFTWBasis((domain[begin], domain[end]), xgrid, step(xgrid))
 end
 
-PeriodicBasisFFT(domain, ngrid) = FFTWBasis(domain, ngrid)
-
 Base.length(b::FFTWBasis) = length(b.xgrid) - 1
 ndofs(b::FFTWBasis) = length(b)
 
@@ -86,7 +84,8 @@ PoissonSolution(b::FFTWBasis, coeffs::AbstractVector) = FFTWSolution(b, coeffs)
 A spectral solver for ``-\\phi'' = \\rho`` on a periodic uniform grid.
 
 The transforms and the inverse Laplacian symbol are built once, so [`solve!`](@ref) allocates
-nothing.
+nothing when it is given a vector of grid values. Given a function, it allocates the vector of
+samples it takes first.
 """
 struct PoissonSolverFFT{DT, BT <: FFTWBasis{DT}, PT, IT} <: PoissonSolver{DT}
     basis::BT

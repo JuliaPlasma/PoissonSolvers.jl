@@ -14,7 +14,8 @@ Solvers for the one-dimensional Poisson equation `-Δϕ = ρ`, with two backends
   the order of the basis and evaluates wherever it is asked.
 
 A `Potential` pairs a solution with the solver that produced it, so a changing source is re-solved
-in place. Every solve and every re-solve allocates nothing, on both backends.
+in place. A solve from a vector allocates nothing, on both backends; a solve from a function
+allocates the right-hand side it samples first.
 
 ```julia
 using PoissonSolvers
@@ -27,7 +28,10 @@ b = PeriodicBasisSpline((0.0, 1.0), 5, 32)   # order k = 5, i.e. degree 4, on 32
 ϕ(0.25)         # the potential
 ϕ(0.25, 1)      # its first derivative
 
-PoissonSolvers.update!(ϕ, ρ)   # re-solve in place for a new source
+PoissonSolvers.update!(ϕ, ρ)   # re-solve for a new source, sampling ρ into a fresh vector
+
+PoissonSolvers.rhs(ϕ) .= …     # or fill the buffer the potential already holds,
+PoissonSolvers.update!(ϕ)      # and re-solve with no allocation at all
 ```
 
 `update!` is deliberately not exported: the name is a common generic, and a caller that has

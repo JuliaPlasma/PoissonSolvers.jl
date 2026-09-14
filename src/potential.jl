@@ -11,7 +11,7 @@ than being stored a second time.
 
 `update!(p, rhs)` overwrites the coefficients in place. That is visible through `p` itself because
 the solution **shares** its coefficient array rather than copying it — the contract every backend
-here keeps, and what makes a re-solve free of allocation.
+here keeps, and what makes a re-solve from a vector free of allocation.
 """
 struct Potential{PT, ST <: PoissonSolver, CT <: AbstractVector}
     potential::PT
@@ -56,7 +56,10 @@ Re-solve `p` for the right-hand side `rhs`, in place, and return `p`.
 
 `rhs` is either a vector or a function, as for [`solve!`](@ref). The new coefficients are written
 into the array the solution already holds, so the result is visible through `p` without anything
-being rebuilt, and nothing is allocated.
+being rebuilt.
+
+With a vector — the stored [`rhs`](@ref) buffer in particular — nothing is allocated. A function
+is sampled onto a fresh vector first, which allocates one per call.
 """
 function update!(p::Potential, rhs = p.rhs)
     solve!(coefficients(p), p.solver, rhs)

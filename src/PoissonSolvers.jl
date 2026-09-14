@@ -17,7 +17,7 @@ export Potential
 
 include("poisson_fft.jl")
 
-export FFTWBasis, PeriodicBasisFFT
+export FFTWBasis
 export PoissonSolverFFT
 
 include("poisson_spline.jl")

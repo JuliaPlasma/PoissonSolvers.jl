@@ -37,6 +37,22 @@ regularise(S, ::AbstractBSplineBasis) = S
 meanfree!(y, x, ::PeriodicBSplineBasis) = y .= x .- sum(x) / length(x)
 meanfree!(y, x, ::AbstractBSplineBasis) = y .= x
 
+# The kernel of the stiffness matrix holds exactly the constants the basis represents, which is
+# what `polynomial_reproduction ≥ 0` reports. The periodic basis is the one such case treated
+# here, by the shift above; a clamped basis and a Neumann recombination are singular with no
+# treatment. Saying so here is what makes the reason reach the caller: the factorisation further
+# down rejects the same matrix, but reports it against the mass matrix and the quadrature order,
+# neither of which is what went wrong.
+function checkbasis(b::AbstractBSplineBasis)
+    polynomial_reproduction(b) ≥ 0 && throw(ArgumentError(
+        "the stiffness matrix of this basis is singular: the basis represents the constants, " *
+        "which -φ'' = ρ leaves undetermined. Use PeriodicBasisSpline for a periodic problem, " *
+        "or DirichletBasisSpline for one with homogeneous Dirichlet boundaries."))
+    return nothing
+end
+
+checkbasis(::PeriodicBSplineBasis) = nothing
+
 @doc raw"""
     PoissonSolverSpline(basis)
 
@@ -44,7 +60,11 @@ A B-spline Galerkin solver for ``-\phi'' = \rho`` on `basis`.
 
 The stiffness matrix is factorised once, through the representation `SimpleSplines` chooses for
 the basis: an FFT for a periodic uniform basis, a banded Cholesky for a Dirichlet one. Both make
-[`solve!`](@ref) allocation-free.
+[`solve!`](@ref) allocation-free when it is given a coefficient vector. Given a function, it
+allocates the load vector it samples first — see [`loadvector`](@ref).
+
+The basis must be periodic or Dirichlet-recombined. Any other basis represents the constants,
+which leaves the stiffness matrix singular; the constructor rejects it.
 """
 struct PoissonSolverSpline{DT, QT <: SplineQuadrature{DT},
     MT <: MassOperator{DT}} <: PoissonSolver{DT}
@@ -52,6 +72,7 @@ struct PoissonSolverSpline{DT, QT <: SplineQuadrature{DT},
     stiffness::MT
 
     function PoissonSolverSpline(b::AbstractBSplineBasis{DT}) where {DT}
+        checkbasis(b)
         q = SplineQuadrature(b)
         S = mass_operator(regularise(stiffness_matrix(q), b), b)
         new{DT, typeof(q), typeof(S)}(q, S)
@@ -72,6 +93,9 @@ The Galerkin load vector ``\\int f \\phi_i \\, dx`` of the function `f`.
 
 This is not `SimpleSplines.l2_projection`, which solves with the mass matrix as well. A Poisson
 right-hand side is the load vector itself.
+
+It returns a fresh vector, so [`solve!`](@ref) on a function allocates one per call. Build the
+load vector once and solve with that where the allocation matters.
 """
 function loadvector(p::PoissonSolverSpline, f)
     q = p.quadrature
