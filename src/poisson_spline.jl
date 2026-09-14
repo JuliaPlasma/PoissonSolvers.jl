@@ -31,7 +31,7 @@ end
 # right-hand side makes the solution of the shifted system the one we want: ``S𝟙 = 0`` is what
 # keeps the constant mode and the rest from mixing. A Dirichlet basis has no constant mode, so
 # both operations are the identity there.
-regularise(S, ::PeriodicBSplineBasis) = S .+ inv(size(S, 1))
+regularise(S, ::PeriodicBSplineBasis) = S .+ one(eltype(S)) / size(S, 1)
 regularise(S, ::AbstractBSplineBasis) = S
 
 meanfree!(y, x, ::PeriodicBSplineBasis) = y .= x .- sum(x) / length(x)
@@ -62,6 +62,10 @@ The stiffness matrix is factorised once, through the representation `SimpleSplin
 the basis: an FFT for a periodic uniform basis, a banded Cholesky for a Dirichlet one. Both make
 [`solve!`](@ref) allocation-free when it is given a coefficient vector. Given a function, it
 allocates the load vector it samples first — see [`loadvector`](@ref).
+
+The factorisation holds transform scratch of its own, which is what makes that possible. A solver
+is therefore not reentrant: two tasks must not call [`solve!`](@ref) on one solver, even with
+distinct result vectors. Give each task its own solver.
 
 The basis must be periodic or Dirichlet-recombined. Any other basis represents the constants,
 which leaves the stiffness matrix singular; the constructor rejects it.

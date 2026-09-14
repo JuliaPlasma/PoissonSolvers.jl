@@ -24,7 +24,7 @@ makes it worth keeping. The record proper begins with the section below.
 
 - **Aqua.jl is now part of the test suite**, guarding against type piracy, undefined exports, stale
   dependencies and the other faults a behaviour-only suite cannot see. The suite grew from about
-  20 assertions to 161, adding `update!`, `rhs`, in-place `solve!`, derivative evaluation, the
+  20 assertions to 173, adding `update!`, `rhs`, in-place `solve!`, derivative evaluation, the
   zero-source `Potential` constructor, convergence rates, order-vs-degree checks, error paths, and
   type-stability and allocation gates.
 
@@ -47,6 +47,24 @@ makes it worth keeping. The record proper begins with the section below.
   spline and grid backends alike. Solving with a *function* still allocates the right-hand side it
   samples first — 2080 B on the periodic spline, 2832 B on the Dirichlet one and 704 B on the grid
   at the sizes measured. Fill `rhs(p)` and call `update!(p)` where that matters.
+
+  The scratch that buys this lives in the solver, so **a solver is not reentrant**: two tasks must
+  not call `solve!` on one solver, even with distinct result vectors. Give each task its own
+  solver. Both solver docstrings say so. Previously every call allocated its own scratch, so this
+  is a new constraint rather than one that was always there unstated.
+
+- **`Potential(basis)` no longer forces `Float64`.** The zero right-hand side of the
+  single-argument constructor was built as `zeros(ndofs(b))` whatever the basis was. On a `Float32`
+  basis that reached the transform as a `Vector{Float64}` and threw a `MethodError` from `mul!`, so
+  the constructor was unusable at any precision but `Float64`. It now follows `eltype(basis)`, and
+  `Base.eltype` is defined on `FFTWBasis` — it fell back to `Any` before, while the SimpleSplines
+  bases already answered it.
+
+- **The regularising shift keeps the element type of the stiffness matrix.** Written as
+  `inv(size(S, 1))` the shift was a `Float64` scalar, so it promoted a `Float32` matrix and with it
+  the mass operator, which then missed the `MassOperator{DT}` bound on the solver field. No caller
+  can reach this today, because a `Float32` periodic basis fails earlier — see `## Open Issues` —
+  but the arithmetic is now right whatever the precision.
 
 - **The grid solver's constant mode no longer divides by zero.** The k = 0 Fourier coefficient was
   computed by dividing by zero and then overwritten; the symbol now carries an exact zero there.
@@ -114,3 +132,10 @@ makes it worth keeping. The record proper begins with the section below.
   1 048 576 at 1024 cells, and a solver on 2048 cells holds 72.5 MB. Filed upstream as
   [SimpleSplines.jl#10](https://github.com/JuliaDEC/SimpleSplines.jl/issues/10), with the fix
   proposed there. The solver is correct and its solves are unaffected; only its memory is.
+
+- **A periodic spline solver cannot be built at `Float32`.** `SimpleSplines.CirculantMass` checks
+  that the assembled mass matrix is circulant against an absolute tolerance of `1e-10`, which
+  `Float32` assembly noise exceeds, so construction fails with `ArgumentError: the mass matrix is
+  not circulant to within 1.0e-10` before this package sees the matrix. The tolerance needs to
+  scale with `eps(eltype)` upstream. The `Float32` Dirichlet spline and `Float32` grid solvers both
+  work.

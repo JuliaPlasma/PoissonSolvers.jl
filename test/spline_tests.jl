@@ -124,3 +124,17 @@ end
     @test_throws ArgumentError PoissonSolverSpline(BSplineBasis(mesh, 4))
     @test_throws ArgumentError PoissonSolverSpline(BSplineBasis(mesh, 4, Neumann()))
 end
+
+@testset "the regularising shift keeps the element type" begin
+    # The shift is a scalar, and written as `inv(size(S, 1))` it is a Float64 one. Added to a
+    # Float32 stiffness matrix it promotes the whole matrix, and with it the mass operator, which
+    # then misses the `MassOperator{DT}` bound on the solver field.
+    #
+    # The basis argument only selects the method, so a Float64 basis drives it. A Float32
+    # periodic basis cannot be built end to end today: SimpleSplines checks the mass matrix for
+    # circulance against an absolute 1e-10, which Float32 assembly noise exceeds.
+    b = PeriodicBasisSpline((0.0, 1.0), 4, 8)
+    S = stiffness_matrix(SplineQuadrature(b))
+    @test eltype(PoissonSolvers.regularise(Float32.(S), b)) == Float32
+    @test eltype(PoissonSolvers.regularise(S, b)) == Float64
+end

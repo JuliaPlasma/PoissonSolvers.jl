@@ -23,6 +23,7 @@ function FFTWBasis(domain, ngrid)
 end
 
 Base.length(b::FFTWBasis) = length(b.xgrid) - 1
+Base.eltype(::FFTWBasis{DT}) where {DT} = DT
 ndofs(b::FFTWBasis) = length(b)
 
 function nearest_indices(b::FFTWBasis, x)
@@ -86,6 +87,10 @@ A spectral solver for ``-\\phi'' = \\rho`` on a periodic uniform grid.
 The transforms and the inverse Laplacian symbol are built once, so [`solve!`](@ref) allocates
 nothing when it is given a vector of grid values. Given a function, it allocates the vector of
 samples it takes first.
+
+The transform scratch is a field of the solver, which is what makes that possible. A solver is
+therefore not reentrant: two tasks must not call [`solve!`](@ref) on one solver, even with
+distinct result vectors. Give each task its own solver.
 """
 struct PoissonSolverFFT{DT, BT <: FFTWBasis{DT}, PT, IT} <: PoissonSolver{DT}
     basis::BT

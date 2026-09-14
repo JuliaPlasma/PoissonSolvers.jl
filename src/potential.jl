@@ -26,7 +26,7 @@ struct Potential{PT, ST <: PoissonSolver, CT <: AbstractVector}
     end
 end
 
-Potential(b) = Potential(b, zeros(ndofs(b)))
+Potential(b) = Potential(b, zeros(eltype(b), ndofs(b)))
 
 basis(p::Potential) = basis(p.potential)
 coefficients(p::Potential) = coefficients(p.potential)

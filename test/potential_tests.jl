@@ -58,3 +58,18 @@ exact(x) = sin(2π * x)
         @test all(iszero, coefficients(potential))
     end
 end
+
+@testset "the element type follows the basis" begin
+    # The zero right-hand side of the single-argument constructor was Float64 whatever the basis
+    # was. On a Float32 basis that reached the transform as a Float64 vector and threw a
+    # MethodError from `mul!`, so the constructor was unusable at any other precision.
+    for b in (FFTWBasis(Float32.((0.0, 1.0)), 64),
+        DirichletBasisSpline(Float32.((0.0, 1.0)), 5, 32))
+        @test eltype(b) == Float32
+
+        potential = Potential(b)
+        @test eltype(rhs(potential)) == Float32
+        @test eltype(coefficients(potential)) == Float32
+        @test potential(0.3f0) == 0
+    end
+end
