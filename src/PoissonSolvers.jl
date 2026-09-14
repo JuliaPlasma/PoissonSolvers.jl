@@ -1,8 +1,10 @@
 module PoissonSolvers
 
-import BSplineKit: Derivative
+# Extended on this package's own solution and solver types, so that a caller who has `using
+# PoissonSolvers` can reach a solution the same way they would reach a `SimpleSplines.Spline`.
+import SimpleSplines: basis, coefficients, derivative
 
-export Derivative
+export basis, coefficients, derivative
 
 include("poisson.jl")
 
@@ -16,10 +18,11 @@ export Potential
 include("poisson_fft.jl")
 
 export FFTWBasis
-export PoissonSolverFFT, PeriodicBasisFFT
+export PoissonSolverFFT
 
-include("poisson_bsplinekit.jl")
+include("poisson_spline.jl")
 
-export PoissonSolverBSplineKit, PeriodicBasisBSplineKit
+export PeriodicBasisSpline, DirichletBasisSpline
+export PoissonSolverSpline
 
 end
