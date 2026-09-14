@@ -125,16 +125,20 @@ end
     @test_throws ArgumentError PoissonSolverSpline(BSplineBasis(mesh, 4, Neumann()))
 end
 
-@testset "the regularising shift keeps the element type" begin
-    # The shift is a scalar, and written as `inv(size(S, 1))` it is a Float64 one. Added to a
-    # Float32 stiffness matrix it promotes the whole matrix, and with it the mass operator, which
-    # then misses the `MassOperator{DT}` bound on the solver field.
-    #
-    # The basis argument only selects the method, so a Float64 basis drives it. A Float32
-    # periodic basis cannot be built end to end today: SimpleSplines checks the mass matrix for
-    # circulance against an absolute 1e-10, which Float32 assembly noise exceeds.
-    b = PeriodicBasisSpline((0.0, 1.0), 4, 8)
+@testset "the stiffness matrix reaches the operator unmodified" begin
+    # The singularity is deflated in the solve, so the assembly is what the operator is handed
+    # and what it keeps. The alternative cure — a shift by the rank-one mean projector 𝟙𝟙ᵀ/n —
+    # is a scalar added to every entry, so it makes a banded assembly structurally full and it
+    # promotes a narrower element type to the scalar's own.
+    b = PeriodicBasisSpline((0.0, 1.0), 4, 32)
+    solver = PoissonSolverSpline(b)
     S = stiffness_matrix(SplineQuadrature(b))
-    @test eltype(PoissonSolvers.regularise(Float32.(S), b)) == Float32
-    @test eltype(PoissonSolvers.regularise(S, b)) == Float64
+
+    stored = count(!iszero, Matrix(SimpleSplines.mass_matrix(solver.stiffness)))
+    @test stored == count(!iszero, Matrix(S))
+    @test stored < nbasis(b)^2 ÷ 4
+    @test eltype(solver.stiffness) == Float64
+
+    # and the deflation is what makes that possible: the solution is still the mean-free one
+    @test sum(solve(solver, randn(nbasis(b)))) ≈ 0 atol = 1e-12
 end

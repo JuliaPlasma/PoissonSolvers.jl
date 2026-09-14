@@ -12,6 +12,39 @@ the tags. That gap is deliberate, and is named rather than
 reconstructed, because a changelog assembled after the fact loses exactly the reasoning that
 makes it worth keeping. The record proper begins with the section below.
 
+## [Unreleased] — targeting 0.5.0
+
+### Breaking Changes
+
+- **`PoissonSolverSpline` no longer regularises the periodic stiffness matrix by a rank-one
+  shift.** Constants lie in the kernel of the periodic stiffness matrix, so it is singular. The
+  solver now asks `SimpleSplines` for the deflated solve directly, with
+  `mass_operator(stiffness_matrix(q), b; kernel = :project)`, which needs `SimpleSplines 0.2`.
+  The answers are unchanged: the deflated solve reproduces the shifted one to round-off and
+  still returns the mean-free solution. What changes is the cost and the condition number.
+
+  The rank-one shift was a scalar added to every entry, which made a banded assembly
+  structurally full. At degree 4 on 2048 cells the shifted matrix alone measured
+  **67 125 416 B**, and a whole `PoissonSolverSpline` **72 551 536 B**, built in 77 ms. The
+  same solver now measures **5 426 160 B**, thirteen times smaller, and what it holds is the
+  sparse assembly: 18 432 stored entries rather than 4 194 304. Construction was O(N²) in both
+  time and storage where the assembly itself is O(N).
+
+  The shift also chose a scale it had no basis for: `inv(N)` is an absolute constant while the
+  spectrum of the stiffness matrix scales with the mesh. On a domain of length 2π·10⁻³ that
+  raised the condition number of the shifted matrix by a factor of 98 over the mean-free
+  spectrum. The deflation works on the mean-free subspace itself and has no such scale. This
+  is the same choice `PoissonSolverFFT` already makes, where the `k = 0` factor is zero rather
+  than `1/k²`.
+
+  The claims above are established by `scripts/verify_kernel_projection.jl`, which is new on
+  this branch and checks the deflation against the shift on both representations.
+
+- **`PoissonSolvers.regularise` and `PoissonSolvers.meanfree!` are removed.** Both were internal
+  and unexported.
+
+- **`SimpleSplines` moves from `"0.1"` to `"0.2"`**, for the `kernel` keyword.
+
 ## [0.4.0] — 2026-09-14
 
 ### New Features
