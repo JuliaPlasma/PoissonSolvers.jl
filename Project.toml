@@ -4,23 +4,23 @@ authors = ["Michael Kraus"]
 version = "0.3.7"
 
 [deps]
-BSplineKit = "093aae92-e908-43d7-9660-e50ee39d5a0a"
 FFTW = "7a1cc6ca-52ef-59f5-83cd-3a7055c09341"
-FastGaussQuadrature = "442a2c76-b920-505d-bb47-c5924d526838"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
-SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
-ToeplitzMatrices = "c751599d-da0a-543b-9d20-d0a503d91d24"
+SimpleSplines = "ac480f6c-9a94-4d53-a283-9db69f109154"
 
 [compat]
-BSplineKit = "0.14, 0.15, 0.16, 0.17, 0.18, 0.19"
+Aqua = "0.8"
 FFTW = "1"
-FastGaussQuadrature = "0.4, 0.5, 1"
-ToeplitzMatrices = "0.8"
+LinearAlgebra = "1"
+SafeTestsets = "0.1"
+SimpleSplines = "0.1"
+Test = "1"
 julia = "1.10"
 
 [extras]
+Aqua = "4c88cf16-eb10-579e-8560-4a9242c79595"
 SafeTestsets = "1bc83da4-3b8d-516f-aca4-4fe02f6d838f"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [targets]
-test = ["SafeTestsets", "Test"]
+test = ["Aqua", "SafeTestsets", "Test"]
