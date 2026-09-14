@@ -93,27 +93,41 @@ end
 end
 
 @testset "type stability and allocations" begin
-    function probe()
-        basis = PeriodicBasisSpline((0.0, 1.0), 5, 32)
+    function probe(mkbasis)
+        basis = mkbasis((0.0, 1.0), 5, 32)
         solver = PoissonSolverSpline(basis)
         ρ = rand(length(solver))
         φ = similar(ρ)
         solve!(φ, solver, ρ)
         (@inferred(solve!(φ, solver, ρ)), @allocated(solve!(φ, solver, ρ)))
     end
-    result, allocated = probe()
-    @test result isa Vector{Float64}
 
-    # `Pkg.test()` forces --check-bounds=yes up to Julia 1.12, which inflates allocations; the
-    # assertion is therefore made only where bounds checking is at its default.
-    if Base.JLOptions().check_bounds == 0
-        @test allocated == 0
+    # The docstring promises an allocation-free `solve!` on both backends, so both are measured.
+    # The two reach different factorisations, and only the periodic one carries scratch.
+    for mkbasis in (PeriodicBasisSpline, DirichletBasisSpline)
+        result, allocated = probe(mkbasis)
+        @test result isa Vector{Float64}
+
+        # `Pkg.test()` forces --check-bounds=yes up to Julia 1.12, which inflates allocations; the
+        # assertion is therefore made only where bounds checking is at its default.
+        if Base.JLOptions().check_bounds == 0
+            @test allocated == 0
+        end
     end
 end
 
 @testset "rejected input" begin
     solver = PoissonSolverSpline(PeriodicBasisSpline((0.0, 1.0), 5, 32))
     @test_throws DimensionMismatch solve!(zeros(8), solver, rand(32))
+
+    # The two backends fail differently without the length check, so both are pinned. A periodic
+    # solve reaches planned transforms, which reject a wrong length themselves; a Dirichlet one
+    # reaches a banded factorisation, which reads a short right-hand side without complaint and
+    # returns an answer for it. The check is all that stands between a caller and that.
+    dirichlet = PoissonSolverSpline(DirichletBasisSpline((0.0, 1.0), 5, 32))
+    n = length(dirichlet)
+    @test_throws DimensionMismatch solve!(zeros(n), dirichlet, rand(8))
+    @test_throws DimensionMismatch solve!(zeros(8), dirichlet, rand(n))
 
     # A periodic basis of degree p needs more than p cells for the wrap to be well defined.
     @test_throws ArgumentError PeriodicBasisSpline((0.0, 1.0), 5, 3)
@@ -125,16 +139,20 @@ end
     @test_throws ArgumentError PoissonSolverSpline(BSplineBasis(mesh, 4, Neumann()))
 end
 
-@testset "the regularising shift keeps the element type" begin
-    # The shift is a scalar, and written as `inv(size(S, 1))` it is a Float64 one. Added to a
-    # Float32 stiffness matrix it promotes the whole matrix, and with it the mass operator, which
-    # then misses the `MassOperator{DT}` bound on the solver field.
-    #
-    # The basis argument only selects the method, so a Float64 basis drives it. A Float32
-    # periodic basis cannot be built end to end today: SimpleSplines checks the mass matrix for
-    # circulance against an absolute 1e-10, which Float32 assembly noise exceeds.
-    b = PeriodicBasisSpline((0.0, 1.0), 4, 8)
+@testset "the stiffness matrix reaches the operator unmodified" begin
+    # The singularity is deflated in the solve, so the assembly is what the operator is handed
+    # and what it keeps. The alternative cure — a shift by the rank-one mean projector 𝟙𝟙ᵀ/n —
+    # is a scalar added to every entry, so it makes a banded assembly structurally full and it
+    # promotes a narrower element type to the scalar's own.
+    b = PeriodicBasisSpline((0.0, 1.0), 4, 32)
+    solver = PoissonSolverSpline(b)
     S = stiffness_matrix(SplineQuadrature(b))
-    @test eltype(PoissonSolvers.regularise(Float32.(S), b)) == Float32
-    @test eltype(PoissonSolvers.regularise(S, b)) == Float64
+
+    stored = count(!iszero, Matrix(SimpleSplines.mass_matrix(solver.stiffness)))
+    @test stored == count(!iszero, Matrix(S))
+    @test stored < nbasis(b)^2 ÷ 4
+    @test eltype(solver.stiffness) == Float64
+
+    # and the deflation is what makes that possible: the solution is still the mean-free one
+    @test sum(solve(solver, randn(nbasis(b)))) ≈ 0 atol = 1e-12
 end

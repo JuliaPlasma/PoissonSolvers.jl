@@ -26,20 +26,18 @@ function DirichletBasisSpline(domain, order, ncells)
     BSplineBasis(UniformMesh(ncells, domain), order - 1, Dirichlet())
 end
 
-# Constants lie in the kernel of the periodic stiffness matrix, so it is singular. Shifting it by
-# the rank-one mean projector ``R = 𝟙𝟙ᵀ/n`` makes it invertible, and taking the mean out of the
-# right-hand side makes the solution of the shifted system the one we want: ``S𝟙 = 0`` is what
-# keeps the constant mode and the rest from mixing. A Dirichlet basis has no constant mode, so
-# both operations are the identity there.
-regularise(S, ::PeriodicBSplineBasis) = S .+ one(eltype(S)) / size(S, 1)
-regularise(S, ::AbstractBSplineBasis) = S
-
-meanfree!(y, x, ::PeriodicBSplineBasis) = y .= x .- sum(x) / length(x)
-meanfree!(y, x, ::AbstractBSplineBasis) = y .= x
+# Constants lie in the kernel of the periodic stiffness matrix, so it is singular. `:project`
+# asks SimpleSplines for the solution with no constant component, which is the one the equation
+# determines: -φ'' = ρ says nothing whatever about the constants, and the deflation drops them
+# from the right-hand side and from the result alike. `PoissonSolverFFT` makes the same choice,
+# where the k = 0 factor is zero rather than 1/k². A Dirichlet basis has no constant in its
+# span, so its stiffness matrix is invertible and there is nothing to deflate.
+kernelmode(::PeriodicBSplineBasis) = :project
+kernelmode(::AbstractBSplineBasis) = :reject
 
 # The kernel of the stiffness matrix holds exactly the constants the basis represents, which is
 # what `polynomial_reproduction ≥ 0` reports. The periodic basis is the one such case treated
-# here, by the shift above; a clamped basis and a Neumann recombination are singular with no
+# here, by the deflation above; a clamped basis and a Neumann recombination are singular with no
 # treatment. Saying so here is what makes the reason reach the caller: the factorisation further
 # down rejects the same matrix, but reports it against the mass matrix and the quadrature order,
 # neither of which is what went wrong.
@@ -63,6 +61,10 @@ the basis: an FFT for a periodic uniform basis, a banded Cholesky for a Dirichle
 [`solve!`](@ref) allocation-free when it is given a coefficient vector. Given a function, it
 allocates the load vector it samples first — see [`loadvector`](@ref).
 
+A periodic stiffness matrix is singular, since ``-\phi'' = \rho`` determines the solution only up
+to a constant. The factorisation deflates that constant, so [`solve!`](@ref) returns the mean-free
+solution, and what the operator holds is the assembly itself, which is ``O(N)`` sparse.
+
 A periodic factorisation holds transform scratch of its own, which is what makes that possible, so
 a periodic solver is not reentrant: two tasks must not call [`solve!`](@ref) on one of them, even
 with distinct result vectors. The Dirichlet factorisation carries no scratch and does not share
@@ -79,7 +81,7 @@ struct PoissonSolverSpline{DT, QT <: SplineQuadrature{DT},
     function PoissonSolverSpline(b::AbstractBSplineBasis{DT}) where {DT}
         checkbasis(b)
         q = SplineQuadrature(b)
-        S = mass_operator(regularise(stiffness_matrix(q), b), b)
+        S = mass_operator(stiffness_matrix(q), b; kernel = kernelmode(b))
         new{DT, typeof(q), typeof(S)}(q, S)
     end
 end
@@ -108,8 +110,14 @@ function loadvector(p::PoissonSolverSpline, f)
 end
 
 function solve!(result::AbstractVector, p::PoissonSolverSpline, rhs::AbstractVector)
-    meanfree!(result, rhs, basis(p))
-    mass_solve!(result, p.stiffness, result)
+    # The transforms behind a periodic solve are planned for one length, and a wrong one reaches
+    # them as "FFTW plan applied to wrong-size output", an ArgumentError naming a plan the caller
+    # never made; a Dirichlet one reaches its factorisation as a BoundsError. The count of degrees
+    # of freedom is what actually went wrong, so say that instead.
+    length(result) == length(rhs) == length(p) || throw(DimensionMismatch(
+        "the solver has $(length(p)) degrees of freedom, but the right-hand side has " *
+        "$(length(rhs)) and the result $(length(result))"))
+    mass_solve!(result, p.stiffness, rhs)
     return result
 end
 
