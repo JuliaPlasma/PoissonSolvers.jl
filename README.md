@@ -5,6 +5,36 @@
 [![Build Status](https://github.com/JuliaPlasma/PoissonSolvers.jl/actions/workflows/CI.yml/badge.svg?branch=main)](https://github.com/JuliaPlasma/PoissonSolvers.jl/actions/workflows/CI.yml?query=branch%3Amain)
 [![Coverage](https://codecov.io/gh/JuliaPlasma/PoissonSolvers.jl/branch/main/graph/badge.svg)](https://codecov.io/gh/JuliaPlasma/PoissonSolvers.jl)
 
+Solvers for the one-dimensional Poisson equation `-Δϕ = ρ`, with two backends:
+
+- **a spectral solver** on a uniform periodic grid, which diagonalises the Laplacian by FFT and
+  evaluates the solution at the nearest grid point;
+- **a B-spline Galerkin solver** on the periodic and homogeneous-Dirichlet bases of
+  [SimpleSplines](https://github.com/JuliaDEC/SimpleSplines.jl), of any order, which converges at
+  the order of the basis and evaluates wherever it is asked.
+
+A `Potential` pairs a solution with the solver that produced it, so a changing source is re-solved
+in place. Every solve and every re-solve allocates nothing, on both backends.
+
+```julia
+using PoissonSolvers
+
+ρ(x) = 4π^2 * sin(2π * x)
+
+basis = PeriodicBasisSpline((0.0, 1.0), 5, 32)   # order k = 5, i.e. degree 4, on 32 cells
+ϕ = Potential(basis, ρ)
+
+ϕ(0.25)         # the potential
+ϕ(0.25, 1)      # its first derivative
+
+PoissonSolvers.update!(ϕ, ρ)   # re-solve in place for a new source
+```
+
+`update!` is deliberately not exported: the name is a common generic, and a caller that has
+another one in scope should not have to disambiguate.
+
+Use `DirichletBasisSpline` where the problem is not periodic, and `FFTWBasis` for the grid solver.
+
 
 ## Development
 
