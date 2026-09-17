@@ -25,6 +25,11 @@ makes it worth keeping. The record proper begins with the section below.
   velocity-moment stencils that shared that file went to `VlasovMethods`, which is where a
   `∫dv` belongs.
 
+  **Three of the four are exported, and `_apply_Lₓ₄!` is not.** That is the export set
+  ReducedBasisMethods had, carried over unchanged so that the move stays a move: widening the
+  API is a decision for whoever gives these functions a public name, not for the commit that
+  relocates them. Reach it as `PoissonSolvers._apply_Lₓ₄!` until then.
+
 ### Bug Fixes
 
 ### Breaking Changes
