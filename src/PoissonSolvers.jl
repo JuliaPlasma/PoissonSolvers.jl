@@ -25,4 +25,8 @@ include("poisson_spline.jl")
 export PeriodicBasisSpline, DirichletBasisSpline
 export PoissonSolverSpline
 
+include("matrixfree.jl")
+
+export _apply_Δₓ!, _apply_Δₓ₄!, _apply_Rₓ!
+
 end

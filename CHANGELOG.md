@@ -12,6 +12,23 @@ the tags. That gap is deliberate, and is named rather than
 reconstructed, because a changelog assembled after the fact loses exactly the reasoning that
 makes it worth keeping. The record proper begins with the section below.
 
+## [Unreleased] — targeting 0.6.0
+
+### New Features
+
+- **Matrix-free one-dimensional Laplace and nullspace stencils**, in `src/matrixfree.jl`:
+  `_apply_Δₓ!` and `_apply_Δₓ₄!` apply the periodic Laplacian to second and fourth order,
+  `_apply_Lₓ₄!` applies the regularised `-Δ + R`, and `_apply_Rₓ!` applies the constant
+  nullspace projection that makes `Δϕ = ρ` well posed. They write into a caller-supplied
+  vector and build no matrix, so they complement `PoissonSolverSpline` rather than replacing
+  it. They arrive verbatim from `ReducedBasisMethods/src/gridbased/poisson.jl`; the
+  velocity-moment stencils that shared that file went to `VlasovMethods`, which is where a
+  `∫dv` belongs.
+
+### Bug Fixes
+
+### Breaking Changes
+
 ## [0.5.0] — 2026-09-14
 
 ### Breaking Changes
