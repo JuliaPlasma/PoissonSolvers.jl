@@ -12,6 +12,29 @@ the tags. That gap is deliberate, and is named rather than
 reconstructed, because a changelog assembled after the fact loses exactly the reasoning that
 makes it worth keeping. The record proper begins with the section below.
 
+## [Unreleased] — targeting 0.6.0
+
+### New Features
+
+- **Matrix-free solver backend `PoissonSolverMatrixFree`, selected by
+  `FiniteDifferenceBasis(domain, ngrid; order = 2 | 4)`.** The solver solves
+  `(-Δ + R)ϕ = (1 - R)ρ` by conjugate gradients on a uniform periodic grid,
+  where `R` projects onto the constant nullspace and the periodic Laplacian is
+  the central difference stencil of the given order, 2 or 4. The solver holds
+  iteration buffers as fields, so `solve!` from a vector allocates zero bytes;
+  given a function, it allocates the vector it samples first. Returns the
+  mean-free solution, the same as `PoissonSolverFFT`. The iteration stops once
+  the residual norm falls to `reltol` times that of `(1 - R)ρ`, and throws
+  `ErrorException` if `maxiter` iterations do not reach it; `solve!` throws
+  `DimensionMismatch` on a vector of the wrong length. `FiniteDifferenceBasis`
+  and `PoissonSolverMatrixFree` are exported.
+
+- **The fourth-order stencil differs from the ReducedBasisMethods copy it
+  derives from** (`ReducedBasisMethods/src/gridbased/poisson.jl`). That copy
+  uses (5, −32, 54, −32, 5)/12h², which is second order (measured error on
+  sin(2πx): 1.97, 0.503, 0.127, 0.0317 at n = 16, 32, 64, 128); PoissonSolvers
+  uses the fourth-order (−1, 16, −30, 16, −1)/12h².
+
 ## [0.5.0] — 2026-09-14
 
 ### Breaking Changes

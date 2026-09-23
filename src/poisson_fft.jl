@@ -43,7 +43,8 @@ end
 """
     FFTWSolution(basis, coefficients)
 
-The solution on an [`FFTWBasis`](@ref), evaluated at the nearest grid point.
+The solution on an [`FFTWBasis`](@ref) or a [`FiniteDifferenceBasis`](@ref), evaluated at the
+nearest grid point.
 """
 struct FFTWSolution{CT, BT}
     basis::BT

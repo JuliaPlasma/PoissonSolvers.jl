@@ -4,14 +4,15 @@ using SimpleSplines
 using Test
 
 # One `Potential` per backend, exercised identically. Everything asserted here is backend
-# independent, so anything that holds for one and not the other is a defect in that one.
+# independent, so anything that holds for one and not another is a defect in that one.
 #
 # The evaluation tolerance is the exception, and is carried per backend for a reason rather than
 # loosened to whichever is worse. A spline evaluates where it is asked; the grid solution snaps to
 # the nearest point, so its error is O(Δx |φ'|) ≈ 0.05 here whatever the solve does. Giving the
 # spline the grid's tolerance would hide a real regression in it.
 const BASES = ("spline" => (PeriodicBasisSpline((0.0, 1.0), 5, 32), 1e-3),
-    "grid" => (FFTWBasis((0.0, 1.0), 64), 0.06))
+    "grid" => (FFTWBasis((0.0, 1.0), 64), 0.06),
+    "matrix-free" => (FiniteDifferenceBasis((0.0, 1.0), 64; order = 4), 0.06))
 
 source(x) = 4π^2 * sin(2π * x)
 exact(x) = sin(2π * x)
@@ -66,6 +67,7 @@ end
     # vector and returned a Float64 potential without complaint, which is why both are asserted
     # here: the loud failure is the easy one to catch.
     for b in (FFTWBasis(Float32.((0.0, 1.0)), 64),
+        FiniteDifferenceBasis(Float32.((0.0, 1.0)), 64),
         DirichletBasisSpline(Float32.((0.0, 1.0)), 5, 32))
         @test eltype(b) == Float32
 

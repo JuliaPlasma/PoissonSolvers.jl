@@ -8,9 +8,9 @@ Solve
 ```math
 - \Delta \phi(x) = f(x)
 ```
-in one dimension, with either a spectral solver on a uniform periodic grid or a B-spline Galerkin
-solver. A [`Potential`](@ref) pairs the solution with the solver that produced it, so that it can
-be re-solved in place as the source changes.
+in one dimension, with a spectral or a matrix-free finite-difference solver on a uniform periodic
+grid, or with a B-spline Galerkin solver. A [`Potential`](@ref) pairs the solution with the
+solver that produced it, so that it can be re-solved in place as the source changes.
 
 Evaluate a potential with `p(x)`, and its `d`-th derivative with `p(x, d)`.
 
@@ -34,6 +34,22 @@ plotted curve is a staircase of width `Δx`.
 
 ```@example 1
 b = FFTWBasis(domain, 64)
+p = Potential(b, rhs)
+```
+
+```@example 1
+plot(xlabel = "x", ylabel = "ϕ(x)")
+plot!(x, p.(x); xlims = domain, label = "Solution")
+plot!(x, sol.(x); xlims = domain, label = "Reference")
+```
+
+## Matrix-Free Solver
+
+The matrix-free solver uses the same grid, and applies a central difference stencil of order 2 or
+4 by conjugate gradients rather than a transform. Its solution evaluates like the FFT solver's.
+
+```@example 1
+b = FiniteDifferenceBasis(domain, 64; order = 4)
 p = Potential(b, rhs)
 ```
 
