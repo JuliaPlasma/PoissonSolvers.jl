@@ -12,6 +12,6 @@ end
 @safetestset "Matrix-Free Solvers                                                             " begin
     include("matrixfree_tests.jl")
 end
-@safetestset "Potential                                                                   " begin
+@safetestset "Potential                                                                       " begin
     include("potential_tests.jl")
 end

@@ -40,6 +40,14 @@ end
         end
         @test all(r -> abs(r - order) < 0.1, rates(errors))
     end
+
+    # `_apply_Lₓ₄!` fuses the fourth-order stencil with the projection, so it applies the same
+    # operator as the solver composes from the separate stencils.
+    solver = PoissonSolver(FiniteDifferenceBasis((0.0, 1.0), 64; order = 4))
+    x = randn(64)
+    y = similar(x)
+    PoissonSolvers._apply_Lₓ₄!(y, x, solver.basis.Δx)
+    @test y ≈ _apply_L!(similar(x), x, solver)
 end
 
 @testset "refinement sweep" begin

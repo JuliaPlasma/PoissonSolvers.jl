@@ -4,7 +4,7 @@ using SimpleSplines
 using Test
 
 # One `Potential` per backend, exercised identically. Everything asserted here is backend
-# independent, so anything that holds for one and not the other is a defect in that one.
+# independent, so anything that holds for one and not another is a defect in that one.
 #
 # The evaluation tolerance is the exception, and is carried per backend for a reason rather than
 # loosened to whichever is worse. A spline evaluates where it is asked; the grid solution snaps to
