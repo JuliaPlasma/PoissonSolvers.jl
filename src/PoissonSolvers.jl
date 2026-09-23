@@ -25,4 +25,9 @@ include("poisson_spline.jl")
 export PeriodicBasisSpline, DirichletBasisSpline
 export PoissonSolverSpline
 
+include("matrixfree.jl")
+
+export FiniteDifferenceBasis
+export PoissonSolverMatrixFree
+
 end
