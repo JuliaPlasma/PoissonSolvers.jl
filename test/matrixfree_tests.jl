@@ -27,6 +27,8 @@ rates(errors) = [log2(errors[i] / errors[i + 1]) for i in 1:(length(errors) - 1)
     end
     @test FiniteDifferenceBasis((0.0, 1.0), 64).order == 2
     @test_throws ArgumentError FiniteDifferenceBasis((0.0, 1.0), 64; order = 3)
+    g = FFTWBasis((0.0, 1.0), 64)
+    @test_throws ArgumentError FiniteDifferenceBasis(g.domain, g.xgrid, g.Δx, 3)
 end
 
 @testset "stencil order" begin
@@ -133,8 +135,8 @@ end
         result, bytes = probe(order)
         @test result isa Vector{Float64}
 
-        # `Pkg.test()` forces --check-bounds=yes up to Julia 1.12, which inflates allocations; the
-        # assertion is therefore made only where bounds checking is at its default.
+        # CI runs the suite with --check-bounds=yes, which inflates allocations; the assertion is
+        # therefore made only where bounds checking is at its default.
         if Base.JLOptions().check_bounds == 0
             @test bytes == 0
         end

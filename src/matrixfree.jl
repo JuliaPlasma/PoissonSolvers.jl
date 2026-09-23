@@ -38,7 +38,7 @@ function _apply_Lₓ₄!(y::AbstractVector, x::AbstractVector, h₁) # 4th order
 end
 
 ### Constant Nullspace Projection
-# if 1 ∈ ker Δ, then Δϕ = ρ is not well posed but (Δ + R)ϕ = (1 - R)ρ is.
+# if 1 ∈ ker Δ, then -Δϕ = ρ is not well posed but (-Δ + R)ϕ = (1 - R)ρ is.
 function _apply_Rₓ!(y::AbstractVector, x::AbstractVector) # Nullspace projection
     nx = length(x)
     length(x) == length(y) || throw(DimensionMismatch())
@@ -62,11 +62,16 @@ struct FiniteDifferenceBasis{DT, GT <: AbstractVector{DT}}
     xgrid::GT
     Δx::DT
     order::Int
+
+    function FiniteDifferenceBasis(domain::Tuple{DT, DT}, xgrid::GT, Δx::DT,
+            order) where {DT, GT <: AbstractVector{DT}}
+        order ∈ (2, 4) ||
+            throw(ArgumentError("the stencil order must be 2 or 4; got order = $(order)"))
+        new{DT, GT}(domain, xgrid, Δx, order)
+    end
 end
 
 function FiniteDifferenceBasis(domain, ngrid; order = 2)
-    order ∈ (2, 4) ||
-        throw(ArgumentError("the stencil order must be 2 or 4; got order = $(order)"))
     grid = FFTWBasis(domain, ngrid)
     FiniteDifferenceBasis(grid.domain, grid.xgrid, grid.Δx, order)
 end
@@ -96,7 +101,10 @@ solution `PoissonSolverFFT` returns. [`solve!`](@ref) finds it by conjugate grad
 the stencils `_apply_Δₓ!` or `_apply_Δₓ₄!` and `_apply_Rₓ!` and building no matrix.
 
 The iteration stops once the residual norm falls to `reltol` times that of ``(1 - R) \rho``, and
-throws an `ErrorException` if `maxiter` iterations do not get it there.
+throws an `ErrorException` if `maxiter` iterations do not get it there. `reltol` bounds the
+residual, not the error: the error may exceed it by up to the condition number of the operator,
+which grows as `ngrid^2`. In `Float32` on a fine grid, the solution is therefore accurate to far
+fewer digits than `eps(Float32)`.
 
 The iteration vectors are fields of the solver, so [`solve!`](@ref) allocates nothing when it is
 given a vector of grid values. Given a function, it allocates the vector of samples it takes

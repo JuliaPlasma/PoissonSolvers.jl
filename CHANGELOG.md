@@ -33,8 +33,7 @@ makes it worth keeping. The record proper begins with the section below.
 - **The stencils `_apply_Δₓ!`, `_apply_Δₓ₄!` and `_apply_Rₓ!` are exported**
   as the operators of the matrix-free backend. They write into a caller-supplied
   vector and build no matrix. They arrive from
-  `ReducedBasisMethods/src/gridbased/poisson.jl`; the velocity-moment stencils
-  that shared that file went to `VlasovMethods`, which is where a `∫dv` belongs.
+  `ReducedBasisMethods/src/gridbased/poisson.jl`.
   `_apply_Δₓ₄!` and `_apply_Lₓ₄!` differ from the ReducedBasisMethods copies:
   those used (5, −32, 54, −32, 5)/12h², which is second order (measured error on
   sin(2πx): 1.97, 0.503, 0.127, 0.0317 at n = 16, 32, 64, 128); PoissonSolvers

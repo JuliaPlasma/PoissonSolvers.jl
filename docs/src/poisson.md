@@ -9,8 +9,8 @@ Solve
 - \Delta \phi(x) = f(x)
 ```
 in one dimension, with a spectral or a matrix-free finite-difference solver on a uniform periodic
-grid, or with a B-spline Galerkin solver. A [`Potential`](@ref) pairs the solution with the solver that produced it, so that it can
-be re-solved in place as the source changes.
+grid, or with a B-spline Galerkin solver. A [`Potential`](@ref) pairs the solution with the
+solver that produced it, so that it can be re-solved in place as the source changes.
 
 Evaluate a potential with `p(x)`, and its `d`-th derivative with `p(x, d)`.
 
