@@ -1,5 +1,5 @@
 using PoissonSolvers
-using PoissonSolvers: _apply_L!
+using PoissonSolvers: _apply_L!, _apply_Δₓ!, _apply_Δₓ₄!, _apply_Rₓ!
 using LinearAlgebra
 using Test
 
@@ -73,6 +73,21 @@ end
         ρ = _apply_L!(similar(φ), φ, solver)
         @test solve(solver, ρ) ≈ φ rtol=1e-10
     end
+end
+
+@testset "Float32 accuracy" begin
+    # `reltol` bounds the residual, not the error, so this checks the error against the analytic
+    # solution. exp(sin(2πx)) has every Fourier mode, so conjugate gradients cannot finish in a few
+    # steps on a few eigenvectors, and the solver returns its mean-free part.
+    potential(x) = exp(sin(2π * x))
+    density(x) = 4π^2 * exp(sin(2π * x)) * (sin(2π * x) - cos(2π * x)^2)
+    b = FiniteDifferenceBasis(Float32.((0.0, 1.0)), 256; order = 4)
+    x = Float64.(gridpoints(b))
+    reference = potential.(x) .- sum(potential.(x)) / length(x)
+    φ = solve(PoissonSolver(b), Float32.(density.(x)))
+
+    @test eltype(φ) == Float32
+    @test norm(φ .- reference) / norm(reference) ≤ 1e-3
 end
 
 @testset "the same periodic problem as the FFT backend" begin

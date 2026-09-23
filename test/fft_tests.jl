@@ -84,8 +84,8 @@ end
     @test result isa Vector{Float64}
     @test value isa Float64
 
-    # `Pkg.test()` forces --check-bounds=yes up to Julia 1.12, which inflates allocations; the
-    # assertions are therefore made only where bounds checking is at its default.
+    # CI runs the suite with --check-bounds=yes, which inflates allocations; the assertions are
+    # therefore made only where bounds checking is at its default.
     if Base.JLOptions().check_bounds == 0
         @test solve_bytes == 0
         @test eval_bytes == 0

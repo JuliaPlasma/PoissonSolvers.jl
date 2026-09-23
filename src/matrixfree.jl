@@ -98,7 +98,7 @@ The periodic Laplacian annihilates the constants, so ``-\Delta \phi = \rho`` is 
 With ``R`` the projection onto the constants, ``(-\Delta + R) \phi = (1 - R) \rho`` is: the
 operator is symmetric positive definite, and its solution is the mean-free one, which is the
 solution `PoissonSolverFFT` returns. [`solve!`](@ref) finds it by conjugate gradients, applying
-the stencils `_apply_Δₓ!` or `_apply_Δₓ₄!` and `_apply_Rₓ!` and building no matrix.
+the central difference stencil and the projection and building no matrix.
 
 The iteration stops once the residual norm falls to `reltol` times that of ``(1 - R) \rho``, and
 throws an `ErrorException` if `maxiter` iterations do not get it there. `reltol` bounds the
@@ -117,12 +117,11 @@ struct PoissonSolverMatrixFree{DT, BT <: FiniteDifferenceBasis{DT}} <: PoissonSo
     r::Vector{DT}
     d::Vector{DT}
     Ld::Vector{DT}
-    Rx::Vector{DT}
 
     function PoissonSolverMatrixFree(b::FiniteDifferenceBasis{DT};
             reltol = 16 * eps(DT), maxiter = 4 * length(b)) where {DT}
         r = Vector{DT}(undef, length(b))
-        new{DT, typeof(b)}(b, reltol, maxiter, r, similar(r), similar(r), similar(r))
+        new{DT, typeof(b)}(b, reltol, maxiter, r, similar(r), similar(r))
     end
 end
 
@@ -137,8 +136,7 @@ gridvalues(p::PoissonSolverMatrixFree, f) = f.(p.basis.xgrid[1:(end - 1)])
 function _apply_L!(y::AbstractVector, x::AbstractVector, p::PoissonSolverMatrixFree)
     b = p.basis
     b.order == 2 ? _apply_Δₓ!(y, x, b.Δx) : _apply_Δₓ₄!(y, x, b.Δx)
-    _apply_Rₓ!(p.Rx, x)
-    y .= p.Rx .- y
+    y .= sum(x) / length(x) .- y
     return y
 end
 
@@ -149,8 +147,7 @@ function solve!(ϕ::AbstractVector, p::PoissonSolverMatrixFree, ρ::AbstractVect
     r, d, Ld = p.r, p.d, p.Ld
 
     # r = (1 - R) ρ is the residual of the initial guess ϕ = 0.
-    _apply_Rₓ!(p.Rx, ρ)
-    r .= ρ .- p.Rx
+    r .= ρ .- sum(ρ) / length(ρ)
     ϕ .= 0
     d .= r
     rr = rr₀ = dot(r, r)
