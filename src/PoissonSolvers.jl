@@ -28,5 +28,7 @@ export PoissonSolverSpline
 include("matrixfree.jl")
 
 export _apply_Δₓ!, _apply_Δₓ₄!, _apply_Rₓ!
+export FiniteDifferenceBasis
+export PoissonSolverMatrixFree
 
 end

@@ -9,6 +9,9 @@ end
 @safetestset "Spline Solvers                                                                  " begin
     include("spline_tests.jl")
 end
-@safetestset "Potential                                                                       " begin
+@safetestset "Matrix-Free Solvers                                                             " begin
+    include("matrixfree_tests.jl")
+end
+@safetestset "Potential                                                                   " begin
     include("potential_tests.jl")
 end
