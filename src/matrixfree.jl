@@ -18,7 +18,7 @@ function _apply_Δₓ₄!(y::AbstractVector, x::AbstractVector, h₁) # 1D Lapla
         i₊ = mod1(i+1, nx)
         i₋₋ = mod1(i-2, nx)
         i₊₊ = mod1(i+2, nx)
-        y[i] = - 1 / (12 * h₁^2) * (5*x[i₊₊] - 32*x[i₊] + 54*x[i] - 32*x[i₋] + 5*x[i₋₋])
+        y[i] = - 1 / (12 * h₁^2) * (x[i₊₊] - 16*x[i₊] + 30*x[i] - 16*x[i₋] + x[i₋₋])
     end
 end
 
@@ -32,7 +32,7 @@ function _apply_Lₓ₄!(y::AbstractVector, x::AbstractVector, h₁) # 1D Laplac
         i₊ = mod1(i+1, nx)
         i₋₋ = mod1(i-2, nx)
         i₊₊ = mod1(i+2, nx)
-        y[i] = 1 / (12 * h₁^2) * (5*x[i₊₊] - 32*x[i₊] + 54*x[i] - 32*x[i₋] + 5*x[i₋₋])
+        y[i] = 1 / (12 * h₁^2) * (x[i₊₊] - 16*x[i₊] + 30*x[i] - 16*x[i₋] + x[i₋₋])
         y[i] += Σx
     end
 end
