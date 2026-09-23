@@ -1,6 +1,6 @@
 name = "PoissonSolvers"
 uuid = "8f9e8900-be71-40de-a258-603fdc860a2d"
-version = "0.5.0"
+version = "0.6.0"
 authors = ["Michael Kraus"]
 
 [deps]

@@ -12,9 +12,18 @@ the tags. That gap is deliberate, and is named rather than
 reconstructed, because a changelog assembled after the fact loses exactly the reasoning that
 makes it worth keeping. The record proper begins with the section below.
 
-## [Unreleased] — targeting 0.6.0
+## [0.6.0] — 2026-09-23
+
+### Breaking Changes
+
+- **None for a caller of 0.5.** Every name and method of 0.5.0 behaves as before. The release is
+  a minor bump because it adds a public solver backend and widens the SimpleSplines bound.
 
 ### New Features
+
+- **SimpleSplines 0.3 is supported alongside 0.2.** Compat only: `SimpleSplines = "0.2, 0.3"`,
+  with no code change. This lets a package that needs SimpleSplines 0.3 resolve together with
+  PoissonSolvers.
 
 - **Matrix-free solver backend `PoissonSolverMatrixFree`, selected by
   `FiniteDifferenceBasis(domain, ngrid; order = 2 | 4)`.** The solver solves
