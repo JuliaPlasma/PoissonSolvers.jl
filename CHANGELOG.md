@@ -21,7 +21,8 @@ makes it worth keeping. The record proper begins with the section below.
   `test/poisson_fft.jl`, `test/poisson_spline.jl`, `test/matrixfree.jl` and `test/potential.jl`.
   The Aqua checks are in `test/quality/aqua.jl`.
 - The test dependencies are in `test/Project.toml`. Aqua, SafeTestsets and Test move there from
-  `[extras]` and `[targets]` of `Project.toml`, with their bounds. Random is a new test dependency:
+  `[extras]` and `[targets]` of `Project.toml`, with their bounds. LinearAlgebra and SimpleSplines
+  are listed there too, with the bounds of `Project.toml`. Random is a new test dependency:
   the three test files that draw random numbers seed the RNG.
 
 ## [0.6.0] — 2026-09-23
