@@ -1,6 +1,9 @@
 using PoissonSolvers
+using Random
 using SimpleSplines
 using Test
+
+Random.seed!(1234)
 
 # The spline solvers are verified by convergence rather than by a single tolerance. A B-spline
 # Galerkin discretisation of order k converges at order k, so the observed rate is what says the
