@@ -12,6 +12,19 @@ the tags. That gap is deliberate, and is named rather than
 reconstructed, because a changelog assembled after the fact loses exactly the reasoning that
 makes it worth keeping. The record proper begins with the section below.
 
+## [Unreleased]
+
+### Changed
+
+- The test suite follows the layout of the other JuliaGNI packages. `test/runtests.jl` holds one
+  `core` group of `@safetestset` lines. Each test file mirrors the source file it tests:
+  `test/poisson_fft.jl`, `test/poisson_spline.jl`, `test/matrixfree.jl` and `test/potential.jl`.
+  The Aqua checks are in `test/quality/aqua.jl`.
+- The test dependencies are in `test/Project.toml`. Aqua, SafeTestsets and Test move there from
+  `[extras]` and `[targets]` of `Project.toml`, with their bounds. LinearAlgebra and SimpleSplines
+  are listed there too, with the bounds of `Project.toml`. Random is a new test dependency:
+  the three test files that draw random numbers seed the RNG.
+
 ## [0.6.0] — 2026-09-23
 
 ### Breaking Changes

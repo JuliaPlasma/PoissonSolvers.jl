@@ -1,17 +1,11 @@
 using SafeTestsets
 
-@safetestset "Aqua                                                                            " begin
-    include("aqua_tests.jl")
-end
-@safetestset "FFT Solvers                                                                     " begin
-    include("fft_tests.jl")
-end
-@safetestset "Spline Solvers                                                                  " begin
-    include("spline_tests.jl")
-end
-@safetestset "Matrix-Free Solvers                                                             " begin
-    include("matrixfree_tests.jl")
-end
-@safetestset "Potential                                                                       " begin
-    include("potential_tests.jl")
+const GROUPS = isempty(ARGS) ? ["core", "slow"] : ARGS
+
+if "core" in GROUPS
+    @safetestset "Aqua" include("quality/aqua.jl")
+    @safetestset "FFT Solvers" include("poisson_fft.jl")
+    @safetestset "Spline Solvers" include("poisson_spline.jl")
+    @safetestset "Matrix-Free Solvers" include("matrixfree.jl")
+    @safetestset "Potential" include("potential.jl")
 end

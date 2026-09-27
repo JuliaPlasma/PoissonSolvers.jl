@@ -1,7 +1,10 @@
 using PoissonSolvers
 using PoissonSolvers: nearest_index, nearest_indices
+using Random
 using SimpleSplines
 using Test
+
+Random.seed!(1234)
 
 @testset "spectral solve" begin
     # The transform diagonalises the periodic Laplacian exactly, so a single sine is reproduced

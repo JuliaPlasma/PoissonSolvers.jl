@@ -1,7 +1,10 @@
 using PoissonSolvers
 using PoissonSolvers: _apply_L!, _apply_Δₓ!, _apply_Δₓ₄!, _apply_Rₓ!
 using LinearAlgebra
+using Random
 using Test
+
+Random.seed!(1234)
 
 source(x) = 4π^2 * sin(2π * x)
 exact(x) = sin(2π * x)
