@@ -7,3 +7,6 @@ PoissonSolvers = "8f9e8900-be71-40de-a258-603fdc860a2d"
 # machine-local path in its place — do not let it.
 [sources]
 PoissonSolvers = {path = ".."}
+
+[compat]
+Documenter = "1.19.0"
