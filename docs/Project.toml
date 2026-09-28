@@ -10,3 +10,4 @@ PoissonSolvers = {path = ".."}
 
 [compat]
 Documenter = "1.19.0"
+Plots = "1.41.7"
