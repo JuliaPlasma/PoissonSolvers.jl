@@ -22,10 +22,9 @@ makes it worth keeping. The record proper begins with the section below.
   The Aqua checks are in `test/quality/aqua.jl`.
 - The test dependencies are in `test/Project.toml`. Aqua, SafeTestsets and Test move there from
   `[extras]` and `[targets]` of `Project.toml`, with their bounds. LinearAlgebra and SimpleSplines
-  are listed there too. Random is a new test dependency: the three test files that draw random
-  numbers seed the RNG.
-- `test/Project.toml` no longer carries a `[compat]` bound for LinearAlgebra or SimpleSplines.
-  Both are dependencies of the package, and `Project.toml` bounds them.
+  are listed there too, and their `[compat]` entries in `test/Project.toml` are removed: both are
+  dependencies of the package, and `Project.toml` bounds them. Random is a new test dependency:
+  the three test files that draw random numbers seed the RNG.
 - `test/quality/jet.jl` runs JET's `report_opt` on the functions that the tests assert with
   `@allocated`: `solve!` of the FFT, spline and matrix-free solvers, and the `Potential` functor
   at `Float64` and `Float32`. It is in the `core` group, after the Aqua checks, and runs only
