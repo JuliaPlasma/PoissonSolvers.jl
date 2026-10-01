@@ -23,3 +23,15 @@
   work.
 - **kind:** upstream
 - **found:** 2026-09-14
+
+### K3 · Revise prints EMFILE errors in the test log.
+
+- **location:** `test/quality/jet.jl`
+- **evidence:** JET 0.12 loads Revise, and its file watcher runs out of file handles. On Julia
+  1.13.1, `grep -c 'UNHANDLED TASK ERROR'` counts 5 blocks in the `run-tests.jl` log of a full
+  `Pkg.test()` of the branch that adds `test/quality/jet.jl`, each an
+  `IOError: FolderMonitor: too many open files (EMFILE)` stack trace. The same count on a full run
+  of `origin/main` at eda0615 gives 0: its test environment holds no JET, so no Revise. These
+  blocks are not test failures, and the test totals do not change.
+- **kind:** upstream
+- **found:** 2026-10-01
