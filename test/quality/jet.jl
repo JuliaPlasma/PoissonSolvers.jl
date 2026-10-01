@@ -12,7 +12,8 @@ using Test
 # `solve` (test/matrixfree.jl) and of the `Potential` constructor (test/potential.jl) reach
 # `solve!` that way.
 
-if isdefined(JET, :JET_AVAILABLE) ? JET.JET_AVAILABLE : JET.JET_LOADABLE
+if isdefined(JET, :JET_AVAILABLE) ? JET.JET_AVAILABLE :
+   (isdefined(JET, :JET_LOADABLE) ? JET.JET_LOADABLE : true)
     m = (PoissonSolvers,)
 
     # test/poisson_fft.jl: solve! and the Potential functor on a grid basis
