@@ -24,7 +24,7 @@
 - **kind:** upstream
 - **found:** 2026-09-14
 
-### K3 · Revise prints EMFILE errors in the test log
+### K3 · Revise prints EMFILE errors in the test log.
 
 - **location:** `test/quality/jet.jl`
 - **evidence:** JET 0.12 loads Revise, and its file watcher runs out of file handles. On Julia
