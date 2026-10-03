@@ -30,6 +30,13 @@ makes it worth keeping. The record proper begins with the section below.
   at `Float64` and `Float32`. It is in the `core` group, after the Aqua checks, and runs only
   where JET works on the running Julia. JET is a new test dependency, with no bound.
 
+### Bug Fixes
+
+- **`solve!` checks its lengths on every backend.** A wrong-length right-hand side or result throws
+  the same `DimensionMismatch` everywhere, naming the solver's length and the two it was given.
+  The FFT backend let FFTW raise a wrong-plan `ArgumentError`; the spline and matrix-free backends
+  already threw the `DimensionMismatch`.
+
 ## [0.6.0] — 2026-09-23
 
 ### Breaking Changes
