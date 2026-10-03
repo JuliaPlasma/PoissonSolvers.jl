@@ -195,7 +195,7 @@ end
 end
 
 @testset "inference on both right-hand side kinds" begin
-    function probe(T, order)
+    function probe(::Type{T}, order) where {T}
         basis = FiniteDifferenceBasis(T.((0.0, 1.0)), 64; order)
         solver = PoissonSolverMatrixFree(basis)
         ρ = rand(T, length(solver))

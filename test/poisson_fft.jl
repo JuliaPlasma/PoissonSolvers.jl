@@ -148,7 +148,7 @@ end
 end
 
 @testset "inference on both right-hand side kinds" begin
-    function probe(T)
+    function probe(::Type{T}) where {T}
         basis = FFTWBasis(T.((0.0, 1.0)), 64)
         solver = PoissonSolverFFT(basis)
         ρ = rand(T, length(solver))
