@@ -29,6 +29,11 @@ makes it worth keeping. The record proper begins with the section below.
   `@allocated`: `solve!` of the FFT, spline and matrix-free solvers, and the `Potential` functor
   at `Float64` and `Float32`. It is in the `core` group, after the Aqua checks, and runs only
   where JET works on the running Julia. JET is a new test dependency, with no bound.
+- The FFTW lower bound rises from 1.0.0 to 1.3.1: `FFTW = "1.3.1"`. FFTW 1.0.0 to 1.3.0 never
+  installed together with SimpleSplines. Those versions bound AbstractFFTs to 0.3–0.5, and every
+  SimpleSplines version needs a ContinuumArrays release that requires AbstractFFTs 1. FFTW 1.3.1
+  is the first version that accepts AbstractFFTs 1. The upper bound is unchanged, so this changes
+  nothing for an install that resolved before.
 
 ### Bug Fixes
 
