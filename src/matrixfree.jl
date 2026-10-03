@@ -130,7 +130,7 @@ PoissonSolver(b::FiniteDifferenceBasis) = PoissonSolverMatrixFree(b)
 basis(p::PoissonSolverMatrixFree) = p.basis
 Base.length(p::PoissonSolverMatrixFree) = length(p.basis)
 
-gridvalues(p::PoissonSolverMatrixFree, f) = f.(p.basis.xgrid[1:(end - 1)])
+discretise(p::PoissonSolverMatrixFree, f) = f.(p.basis.xgrid[1:(end - 1)])
 
 # y = (-Δ + R) x
 function _apply_L!(y::AbstractVector, x::AbstractVector, p::PoissonSolverMatrixFree)
@@ -141,9 +141,7 @@ function _apply_L!(y::AbstractVector, x::AbstractVector, p::PoissonSolverMatrixF
 end
 
 function solve!(ϕ::AbstractVector, p::PoissonSolverMatrixFree, ρ::AbstractVector)
-    length(ϕ) == length(ρ) == length(p) || throw(DimensionMismatch(
-        "the solver has $(length(p)) degrees of freedom, but the right-hand side has " *
-        "$(length(ρ)) and the result $(length(ϕ))"))
+    checklengths(ϕ, ρ, p)
     r, d, Ld = p.r, p.d, p.Ld
 
     # r = (1 - R) ρ is the residual of the initial guess ϕ = 0.
@@ -167,10 +165,3 @@ function solve!(ϕ::AbstractVector, p::PoissonSolverMatrixFree, ρ::AbstractVect
           "$(p.reltol) in $(p.maxiter) iterations; it stopped at $(sqrt(rr / rr₀))")
     return ϕ
 end
-
-function solve!(ϕ::AbstractVector, p::PoissonSolverMatrixFree, rhs::Base.Callable)
-    solve!(ϕ, p, gridvalues(p, rhs))
-end
-
-solve(p::PoissonSolverMatrixFree, rhs::AbstractVector) = solve!(similar(rhs), p, rhs)
-solve(p::PoissonSolverMatrixFree, rhs::Base.Callable) = solve(p, gridvalues(p, rhs))

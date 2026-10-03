@@ -37,12 +37,14 @@ function report()
     periodic = PeriodicBasisSpline((0.0, 1.0), ORDER, NCELLS)
     dirichlet = DirichletBasisSpline((0.0, 1.0), ORDER, NCELLS)
     grid = FFTWBasis((0.0, 1.0), NGRID)
+    grid2 = FiniteDifferenceBasis((0.0, 1.0), NGRID; order = 2)
+    grid4 = FiniteDifferenceBasis((0.0, 1.0), NGRID; order = 4)
 
     source(x) = 4π^2 * sin(2π * x)
 
     rows = Tuple{String, Int}[]
     for (name, b) in ("periodic spline" => periodic, "Dirichlet spline" => dirichlet,
-        "grid" => grid)
+        "grid" => grid, "matrix-free order 2" => grid2, "matrix-free order 4" => grid4)
         solver = PoissonSolver(b)
         ρ = rand(length(solver))
         φ = similar(ρ)

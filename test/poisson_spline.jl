@@ -159,3 +159,33 @@ end
     # and the deflation is what makes that possible: the solution is still the mean-free one
     @test sum(solve(solver, randn(nbasis(b)))) ≈ 0 atol = 1e-12
 end
+
+@testset "the function path reduces to the load vector" begin
+    # The function path reduces `f` through the shared hook, which for a spline is the Galerkin
+    # load vector the vector path was always handed; the two are therefore `==`.
+    f(x) = 4π^2 * sin(2π * x) + 0.3 * cos(6π * x)
+    for basis in (PeriodicBasisSpline((0.0, 1.0), 5, 32), DirichletBasisSpline((0.0, 1.0), 5, 32))
+        solver = PoissonSolverSpline(basis)
+        lv = PoissonSolvers.loadvector(solver, f)
+
+        @test solve(solver, f) == solve!(similar(lv), solver, lv)
+        @test solve!(similar(lv), solver, f) == solve!(similar(lv), solver, lv)
+    end
+end
+
+@testset "inference on both right-hand side kinds" begin
+    function probe(mkbasis)
+        basis = mkbasis((0.0, 1.0), 5, 32)
+        solver = PoissonSolverSpline(basis)
+        ρ = rand(length(solver))
+        f = x -> 4π^2 * sin(2π * x)
+        (@inferred(solve!(similar(ρ), solver, ρ)),
+            @inferred(solve!(similar(ρ), solver, f)),
+            @inferred(solve(solver, ρ)), @inferred(solve(solver, f)))
+    end
+    for mkbasis in (PeriodicBasisSpline, DirichletBasisSpline)
+        a, b, c, d = probe(mkbasis)
+        @test a isa Vector{Float64} && b isa Vector{Float64}
+        @test c isa Vector{Float64} && d isa Vector{Float64}
+    end
+end

@@ -38,3 +38,26 @@ Solve ``-\\Delta \\phi = \\rho`` for the coefficients of ``\\phi``.
 function solve! end
 
 @doc (@doc solve!) function solve end
+
+"""
+    discretise(solver, f)
+
+The discrete right-hand side of the function `f` on `solver`'s basis: for a grid, the samples the
+solver takes; for a spline, the Galerkin load vector.
+"""
+function discretise end
+
+# The count of degrees of freedom is what actually disagreed: a wrong length otherwise reaches a
+# planned transform or a factorisation, which reports it against a plan the caller never made.
+function checklengths(result, rhs, p::PoissonSolver)
+    length(result) == length(rhs) == length(p) || throw(DimensionMismatch(
+        "the solver has $(length(p)) degrees of freedom, but the right-hand side has " *
+        "$(length(rhs)) and the result $(length(result))"))
+    return nothing
+end
+
+function solve!(coeffs::AbstractVector, p::PoissonSolver, rhs::Base.Callable)
+    solve!(coeffs, p, discretise(p, rhs))
+end
+solve(p::PoissonSolver, rhs::AbstractVector) = solve!(similar(rhs), p, rhs)
+solve(p::PoissonSolver, rhs::Base.Callable) = solve(p, discretise(p, rhs))

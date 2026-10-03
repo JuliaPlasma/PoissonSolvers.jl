@@ -110,20 +110,9 @@ function loadvector(p::PoissonSolverSpline, f)
 end
 
 function solve!(result::AbstractVector, p::PoissonSolverSpline, rhs::AbstractVector)
-    # The transforms behind a periodic solve are planned for one length, and a wrong one reaches
-    # them as "FFTW plan applied to wrong-size output", an ArgumentError naming a plan the caller
-    # never made; a Dirichlet one reaches its factorisation as a BoundsError. The count of degrees
-    # of freedom is what actually went wrong, so say that instead.
-    length(result) == length(rhs) == length(p) || throw(DimensionMismatch(
-        "the solver has $(length(p)) degrees of freedom, but the right-hand side has " *
-        "$(length(rhs)) and the result $(length(result))"))
+    checklengths(result, rhs, p)
     mass_solve!(result, p.stiffness, rhs)
     return result
 end
 
-function solve!(result::AbstractVector, p::PoissonSolverSpline, rhs::Base.Callable)
-    solve!(result, p, loadvector(p, rhs))
-end
-
-solve(p::PoissonSolverSpline, rhs::AbstractVector) = solve!(similar(rhs), p, rhs)
-solve(p::PoissonSolverSpline, rhs::Base.Callable) = solve(p, loadvector(p, rhs))
+discretise(p::PoissonSolverSpline, f) = loadvector(p, f)

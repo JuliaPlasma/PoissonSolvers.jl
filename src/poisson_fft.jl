@@ -128,18 +128,12 @@ PoissonSolver(b::FFTWBasis) = PoissonSolverFFT(b)
 basis(p::PoissonSolverFFT) = p.basis
 Base.length(p::PoissonSolverFFT) = length(p.basis)
 
-gridvalues(p::PoissonSolverFFT, f) = f.(p.basis.xgrid[1:(end - 1)])
+discretise(p::PoissonSolverFFT, f) = f.(p.basis.xgrid[1:(end - 1)])
 
 function solve!(coeffs::AbstractVector, p::PoissonSolverFFT, rhs::AbstractVector)
+    checklengths(coeffs, rhs, p)
     mul!(p.ρ̂, p.plan, rhs)
     p.ρ̂ .*= p.k⁻²
     mul!(coeffs, p.iplan, p.ρ̂)
     return coeffs
 end
-
-function solve!(coeffs::AbstractVector, p::PoissonSolverFFT, rhs::Base.Callable)
-    solve!(coeffs, p, gridvalues(p, rhs))
-end
-
-solve(p::PoissonSolverFFT, rhs::AbstractVector) = solve!(similar(rhs), p, rhs)
-solve(p::PoissonSolverFFT, rhs::Base.Callable) = solve(p, gridvalues(p, rhs))

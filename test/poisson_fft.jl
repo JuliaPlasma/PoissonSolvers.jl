@@ -94,3 +94,60 @@ end
         @test eval_bytes == 0
     end
 end
+
+@testset "a wrong length is a DimensionMismatch" begin
+    # The spline and matrix-free backends have always checked this. The FFT one reached FFTW's
+    # plan, which reported a wrong-size array without naming what actually disagreed.
+    solver = PoissonSolverFFT(FFTWBasis((0.0, 1.0), 64))
+
+    @test_throws DimensionMismatch solve!(zeros(64), solver, zeros(63))
+    @test_throws DimensionMismatch solve!(zeros(63), solver, zeros(64))
+
+    # The three lengths are distinct here, so the message pins each of them. `poisson_spline.jl`
+    # writes the same sentence.
+    err = try
+        solve!(zeros(62), solver, zeros(63))
+    catch e
+        e
+    end
+    @test err isa DimensionMismatch
+    @test occursin("64", err.msg) && occursin("63", err.msg) && occursin("62", err.msg)
+
+    # A zero-length result and an equal-but-wrong result disagree with the solver too. A check
+    # that compared only the result with the right-hand side would accept both.
+    @test_throws DimensionMismatch solve!(zeros(0), solver, zeros(0))
+    @test_throws DimensionMismatch solve!(zeros(63), solver, zeros(63))
+
+    # The plans are UNALIGNED so that they accept a strided view; a wrong-length view must reach
+    # the length check rather than FFTW.
+    long = zeros(65)
+    @test_throws DimensionMismatch solve!(zeros(64), solver, view(long, 1:63))
+    @test_throws DimensionMismatch solve!(view(long, 1:63), solver, zeros(64))
+end
+
+@testset "the function path reduces to the sampled vector path" begin
+    # The function path reduces `f` through the shared hook, which for a grid samples the grid
+    # points the vector path was always built from; the two are therefore `==`.
+    basis = FFTWBasis((0.0, 1.0), 64)
+    solver = PoissonSolverFFT(basis)
+    f = x -> 4π^2 * sin(2π * x) + 0.3 * cos(6π * x)
+    rhs = f.(basis.xgrid[1:(end - 1)])
+
+    @test solve(solver, f) == solve!(similar(rhs), solver, rhs)
+    @test solve!(similar(rhs), solver, f) == solve!(similar(rhs), solver, rhs)
+end
+
+@testset "inference on both right-hand side kinds" begin
+    function probe()
+        basis = FFTWBasis((0.0, 1.0), 64)
+        solver = PoissonSolverFFT(basis)
+        ρ = rand(length(solver))
+        f = x -> 4π^2 * sin(2π * x)
+        (@inferred(solve!(similar(ρ), solver, ρ)),
+            @inferred(solve!(similar(ρ), solver, f)),
+            @inferred(solve(solver, ρ)), @inferred(solve(solver, f)))
+    end
+    a, b, c, d = probe()
+    @test a isa Vector{Float64} && b isa Vector{Float64}
+    @test c isa Vector{Float64} && d isa Vector{Float64}
+end

@@ -160,3 +160,34 @@ end
         end
     end
 end
+
+@testset "the function path reduces to the sampled vector path" begin
+    # As for the FFT backend: the function path samples the same grid points the vector path was
+    # always built from, at both stencil orders.
+    f(x) = 4π^2 * sin(2π * x) + 0.3 * cos(6π * x)
+    for order in (2, 4)
+        basis = FiniteDifferenceBasis((0.0, 1.0), 64; order)
+        solver = PoissonSolverMatrixFree(basis)
+        rhs = f.(basis.xgrid[1:(end - 1)])
+
+        @test solve(solver, f) == solve!(similar(rhs), solver, rhs)
+        @test solve!(similar(rhs), solver, f) == solve!(similar(rhs), solver, rhs)
+    end
+end
+
+@testset "inference on both right-hand side kinds" begin
+    function probe(order)
+        basis = FiniteDifferenceBasis((0.0, 1.0), 64; order)
+        solver = PoissonSolverMatrixFree(basis)
+        ρ = rand(length(solver))
+        f = x -> 4π^2 * sin(2π * x)
+        (@inferred(solve!(similar(ρ), solver, ρ)),
+            @inferred(solve!(similar(ρ), solver, f)),
+            @inferred(solve(solver, ρ)), @inferred(solve(solver, f)))
+    end
+    for order in (2, 4)
+        a, b, c, d = probe(order)
+        @test a isa Vector{Float64} && b isa Vector{Float64}
+        @test c isa Vector{Float64} && d isa Vector{Float64}
+    end
+end
