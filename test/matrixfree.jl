@@ -133,6 +133,17 @@ end
     solver = PoissonSolver(FiniteDifferenceBasis((0.0, 1.0), 64))
     @test_throws DimensionMismatch solve!(zeros(64), solver, zeros(63))
     @test_throws DimensionMismatch solve!(zeros(63), solver, zeros(64))
+
+    # Both element types, and a strided view at an offset, reach the same check.
+    for T in (Float64, Float32)
+        solvert = PoissonSolver(FiniteDifferenceBasis(T.((0.0, 1.0)), 64))
+        @test_throws DimensionMismatch solve!(zeros(T, 64), solvert, zeros(T, 63))
+        @test_throws DimensionMismatch solve!(zeros(T, 63), solvert, zeros(T, 64))
+
+        long = zeros(T, 65)
+        @test_throws DimensionMismatch solve!(zeros(T, 64), solvert, view(long, 2:64))
+        @test_throws DimensionMismatch solve!(view(long, 2:64), solvert, zeros(T, 64))
+    end
 end
 
 @testset "non-convergence throws" begin
@@ -162,32 +173,42 @@ end
 end
 
 @testset "the function path reduces to the sampled vector path" begin
-    # As for the FFT backend: the function path samples the same grid points the vector path was
-    # always built from, at both stencil orders.
-    f(x) = 4π^2 * sin(2π * x) + 0.3 * cos(6π * x)
-    for order in (2, 4)
-        basis = FiniteDifferenceBasis((0.0, 1.0), 64; order)
-        solver = PoissonSolverMatrixFree(basis)
-        rhs = f.(basis.xgrid[1:(end - 1)])
+    # As for the FFT backend: the function path samples the grid points the vector path uses, at
+    # both stencil orders and both element types.
+    for T in (Float64, Float32)
+        for order in (2, 4)
+            basis = FiniteDifferenceBasis(T.((0.0, 1.0)), 64; order)
+            solver = PoissonSolverMatrixFree(basis)
+            f = x -> T(4π^2 * sin(2π * x) + 0.3 * cos(6π * x))
+            rhs = f.(basis.xgrid[1:(end - 1)])
 
-        @test solve(solver, f) == solve!(similar(rhs), solver, rhs)
-        @test solve!(similar(rhs), solver, f) == solve!(similar(rhs), solver, rhs)
+            @test solve(solver, f) == solve!(similar(rhs), solver, rhs)
+            @test solve!(similar(rhs), solver, f) == solve!(similar(rhs), solver, rhs)
+
+            # A strided view at an offset is a valid right-hand side too.
+            wider = zeros(T, 65)
+            wider[2:65] .= rhs
+            @test solve!(similar(rhs), solver, view(wider, 2:65)) ==
+                  solve!(similar(rhs), solver, rhs)
+        end
     end
 end
 
 @testset "inference on both right-hand side kinds" begin
-    function probe(order)
-        basis = FiniteDifferenceBasis((0.0, 1.0), 64; order)
+    function probe(T, order)
+        basis = FiniteDifferenceBasis(T.((0.0, 1.0)), 64; order)
         solver = PoissonSolverMatrixFree(basis)
-        ρ = rand(length(solver))
-        f = x -> 4π^2 * sin(2π * x)
+        ρ = rand(T, length(solver))
+        f = x -> T(4π^2 * sin(2π * x))
         (@inferred(solve!(similar(ρ), solver, ρ)),
             @inferred(solve!(similar(ρ), solver, f)),
             @inferred(solve(solver, ρ)), @inferred(solve(solver, f)))
     end
-    for order in (2, 4)
-        a, b, c, d = probe(order)
-        @test a isa Vector{Float64} && b isa Vector{Float64}
-        @test c isa Vector{Float64} && d isa Vector{Float64}
+    for T in (Float64, Float32)
+        for order in (2, 4)
+            a, b, c, d = probe(T, order)
+            @test a isa Vector{T} && b isa Vector{T}
+            @test c isa Vector{T} && d isa Vector{T}
+        end
     end
 end

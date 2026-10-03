@@ -132,6 +132,11 @@ end
     @test_throws DimensionMismatch solve!(zeros(n), dirichlet, rand(8))
     @test_throws DimensionMismatch solve!(zeros(8), dirichlet, rand(n))
 
+    # A strided view at an offset reaches the same check as a plain vector.
+    long = zeros(40)
+    @test_throws DimensionMismatch solve!(zeros(32), solver, view(long, 2:32))
+    @test_throws DimensionMismatch solve!(view(long, 2:32), solver, rand(32))
+
     # A periodic basis of degree p needs more than p cells for the wrap to be well defined.
     @test_throws ArgumentError PeriodicBasisSpline((0.0, 1.0), 5, 3)
 
@@ -161,8 +166,8 @@ end
 end
 
 @testset "the function path reduces to the load vector" begin
-    # The function path reduces `f` through the shared hook, which for a spline is the Galerkin
-    # load vector the vector path was always handed; the two are therefore `==`.
+    # The function path reduces `f` through the shared hook, which is the Galerkin load vector the
+    # vector path uses; the two are therefore `==`.
     f(x) = 4π^2 * sin(2π * x) + 0.3 * cos(6π * x)
     for basis in (PeriodicBasisSpline((0.0, 1.0), 5, 32), DirichletBasisSpline((0.0, 1.0), 5, 32))
         solver = PoissonSolverSpline(basis)
@@ -170,6 +175,12 @@ end
 
         @test solve(solver, f) == solve!(similar(lv), solver, lv)
         @test solve!(similar(lv), solver, f) == solve!(similar(lv), solver, lv)
+
+        # A strided view at an offset is a valid right-hand side too.
+        wider = zeros(length(lv) + 1)
+        wider[2:end] .= lv
+        @test solve!(similar(lv), solver, view(wider, 2:length(wider))) ==
+              solve!(similar(lv), solver, lv)
     end
 end
 
