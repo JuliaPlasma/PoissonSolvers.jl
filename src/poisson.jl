@@ -38,3 +38,27 @@ Solve ``-\\Delta \\phi = \\rho`` for the coefficients of ``\\phi``.
 function solve! end
 
 @doc (@doc solve!) function solve end
+
+"""
+    discretise(solver, f)
+
+The discrete right-hand side of the function `f` on `solver`'s basis: for a grid, the samples the
+solver takes; for a spline, the Galerkin load vector.
+"""
+function discretise end
+
+# Each backend's `solve!` calls this first. Without it a wrong length fails deeper — in a plan,
+# a factorisation or a broadcast — or, in the Dirichlet spline, a short right-hand side is read
+# without complaint and answered as if it fit. Naming the three lengths says what disagrees.
+function checklengths(result, p::PoissonSolver, rhs)
+    length(result) == length(rhs) == length(p) || throw(DimensionMismatch(
+        "the solver has $(length(p)) degrees of freedom, but the right-hand side has " *
+        "$(length(rhs)) and the result $(length(result))"))
+    return nothing
+end
+
+function solve!(coeffs::AbstractVector, p::PoissonSolver, rhs::Base.Callable)
+    solve!(coeffs, p, discretise(p, rhs))
+end
+solve(p::PoissonSolver, rhs::AbstractVector) = solve!(similar(rhs), p, rhs)
+solve(p::PoissonSolver, rhs::Base.Callable) = solve(p, discretise(p, rhs))

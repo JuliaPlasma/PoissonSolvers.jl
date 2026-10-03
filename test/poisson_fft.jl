@@ -94,3 +94,73 @@ end
         @test eval_bytes == 0
     end
 end
+
+@testset "a wrong length is a DimensionMismatch" begin
+    # Every backend checks the three lengths before it solves, so a wrong one is a
+    # DimensionMismatch naming the three counts.
+    for T in (Float64, Float32)
+        solver = PoissonSolverFFT(FFTWBasis(T.((0.0, 1.0)), 64))
+
+        @test_throws DimensionMismatch solve!(zeros(T, 64), solver, zeros(T, 63))
+        @test_throws DimensionMismatch solve!(zeros(T, 63), solver, zeros(T, 64))
+
+        # The three lengths are distinct here, so the message pins which length is which.
+        err = try
+            solve!(zeros(T, 62), solver, zeros(T, 63))
+        catch e
+            e
+        end
+        @test err isa DimensionMismatch
+        @test err.msg ==
+              "the solver has 64 degrees of freedom, but the right-hand side has 63 and the result 62"
+
+        # A zero-length result and an equal-but-wrong result disagree with the solver too. A check
+        # that compared only the result with the right-hand side would accept both.
+        @test_throws DimensionMismatch solve!(zeros(T, 0), solver, zeros(T, 0))
+        @test_throws DimensionMismatch solve!(zeros(T, 63), solver, zeros(T, 63))
+
+        # The plans are UNALIGNED so that they accept a contiguous view at an offset; a
+        # wrong-length view must reach the length check rather than FFTW.
+        long = zeros(T, 65)
+        @test_throws DimensionMismatch solve!(zeros(T, 64), solver, view(long, 2:64))
+        @test_throws DimensionMismatch solve!(view(long, 2:64), solver, zeros(T, 64))
+    end
+end
+
+@testset "the function path reduces to the sampled vector path" begin
+    # The function path reduces `f` through the shared hook, which for a grid samples the grid
+    # points the vector path uses; the two are therefore `==`.
+    for T in (Float64, Float32)
+        basis = FFTWBasis(T.((0.0, 1.0)), 64)
+        solver = PoissonSolverFFT(basis)
+        f = x -> T(4π^2 * sin(2π * x) + 0.3 * cos(6π * x))
+        rhs = f.(basis.xgrid[1:(end - 1)])
+
+        @test solve(solver, f) == solve!(similar(rhs), solver, rhs)
+        @test solve!(similar(rhs), solver, f) == solve!(similar(rhs), solver, rhs)
+
+        # A contiguous view at an offset is a valid right-hand side too, because the plans accept
+        # one.
+        wider = zeros(T, 65)
+        wider[2:65] .= rhs
+        @test solve!(similar(rhs), solver, view(wider, 2:65)) ==
+              solve!(similar(rhs), solver, rhs)
+    end
+end
+
+@testset "inference on both right-hand side kinds" begin
+    function probe(::Type{T}) where {T}
+        basis = FFTWBasis(T.((0.0, 1.0)), 64)
+        solver = PoissonSolverFFT(basis)
+        ρ = rand(T, length(solver))
+        f = x -> T(4π^2 * sin(2π * x))
+        (@inferred(solve!(similar(ρ), solver, ρ)),
+            @inferred(solve!(similar(ρ), solver, f)),
+            @inferred(solve(solver, ρ)), @inferred(solve(solver, f)))
+    end
+    for T in (Float64, Float32)
+        a, b, c, d = probe(T)
+        @test a isa Vector{T} && b isa Vector{T}
+        @test c isa Vector{T} && d isa Vector{T}
+    end
+end

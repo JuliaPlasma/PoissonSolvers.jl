@@ -132,6 +132,11 @@ end
     @test_throws DimensionMismatch solve!(zeros(n), dirichlet, rand(8))
     @test_throws DimensionMismatch solve!(zeros(8), dirichlet, rand(n))
 
+    # A contiguous view at an offset reaches the same check as a plain vector.
+    long = zeros(40)
+    @test_throws DimensionMismatch solve!(zeros(32), solver, view(long, 2:32))
+    @test_throws DimensionMismatch solve!(view(long, 2:32), solver, rand(32))
+
     # A periodic basis of degree p needs more than p cells for the wrap to be well defined.
     @test_throws ArgumentError PeriodicBasisSpline((0.0, 1.0), 5, 3)
 
@@ -158,4 +163,40 @@ end
 
     # and the deflation is what makes that possible: the solution is still the mean-free one
     @test sum(solve(solver, randn(nbasis(b)))) ≈ 0 atol = 1e-12
+end
+
+@testset "the function path reduces to the load vector" begin
+    # The function path reduces `f` through the shared hook, which is the Galerkin load vector the
+    # vector path uses; the two are therefore `==`.
+    f(x) = 4π^2 * sin(2π * x) + 0.3 * cos(6π * x)
+    for basis in (PeriodicBasisSpline((0.0, 1.0), 5, 32), DirichletBasisSpline((0.0, 1.0), 5, 32))
+        solver = PoissonSolverSpline(basis)
+        lv = PoissonSolvers.loadvector(solver, f)
+
+        @test solve(solver, f) == solve!(similar(lv), solver, lv)
+        @test solve!(similar(lv), solver, f) == solve!(similar(lv), solver, lv)
+
+        # A contiguous view at an offset is a valid right-hand side too.
+        wider = zeros(length(lv) + 1)
+        wider[2:end] .= lv
+        @test solve!(similar(lv), solver, view(wider, 2:length(wider))) ==
+              solve!(similar(lv), solver, lv)
+    end
+end
+
+@testset "inference on both right-hand side kinds" begin
+    function probe(mkbasis)
+        basis = mkbasis((0.0, 1.0), 5, 32)
+        solver = PoissonSolverSpline(basis)
+        ρ = rand(length(solver))
+        f = x -> 4π^2 * sin(2π * x)
+        (@inferred(solve!(similar(ρ), solver, ρ)),
+            @inferred(solve!(similar(ρ), solver, f)),
+            @inferred(solve(solver, ρ)), @inferred(solve(solver, f)))
+    end
+    for mkbasis in (PeriodicBasisSpline, DirichletBasisSpline)
+        a, b, c, d = probe(mkbasis)
+        @test a isa Vector{Float64} && b isa Vector{Float64}
+        @test c isa Vector{Float64} && d isa Vector{Float64}
+    end
 end
