@@ -96,8 +96,8 @@ end
 end
 
 @testset "a wrong length is a DimensionMismatch" begin
-    # Every backend checks the three lengths before it reaches a plan or a factorisation, so a
-    # wrong one is a DimensionMismatch naming the three counts.
+    # Every backend checks the three lengths before it solves, so a wrong one is a
+    # DimensionMismatch naming the three counts.
     for T in (Float64, Float32)
         solver = PoissonSolverFFT(FFTWBasis(T.((0.0, 1.0)), 64))
 
@@ -119,8 +119,8 @@ end
         @test_throws DimensionMismatch solve!(zeros(T, 0), solver, zeros(T, 0))
         @test_throws DimensionMismatch solve!(zeros(T, 63), solver, zeros(T, 63))
 
-        # The plans are UNALIGNED so that they accept a strided view at an offset; a wrong-length
-        # view must reach the length check rather than FFTW.
+        # The plans are UNALIGNED so that they accept a contiguous view at an offset; a
+        # wrong-length view must reach the length check rather than FFTW.
         long = zeros(T, 65)
         @test_throws DimensionMismatch solve!(zeros(T, 64), solver, view(long, 2:64))
         @test_throws DimensionMismatch solve!(view(long, 2:64), solver, zeros(T, 64))
@@ -139,7 +139,8 @@ end
         @test solve(solver, f) == solve!(similar(rhs), solver, rhs)
         @test solve!(similar(rhs), solver, f) == solve!(similar(rhs), solver, rhs)
 
-        # A strided view at an offset is a valid right-hand side too, because the plans accept one.
+        # A contiguous view at an offset is a valid right-hand side too, because the plans accept
+        # one.
         wider = zeros(T, 65)
         wider[2:65] .= rhs
         @test solve!(similar(rhs), solver, view(wider, 2:65)) ==

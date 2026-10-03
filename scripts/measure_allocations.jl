@@ -44,7 +44,7 @@ function report()
 
     rows = Tuple{String, Int}[]
     for (name, b) in ("periodic spline" => periodic, "Dirichlet spline" => dirichlet,
-        "grid" => grid, "matrix-free order 2" => grid2, "matrix-free order 4" => grid4)
+        "FFT" => grid, "matrix-free order 2" => grid2, "matrix-free order 4" => grid4)
         solver = PoissonSolver(b)
         ρ = rand(length(solver))
         φ = similar(ρ)

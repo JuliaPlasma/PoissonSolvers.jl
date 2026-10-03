@@ -130,7 +130,9 @@ PoissonSolver(b::FiniteDifferenceBasis) = PoissonSolverMatrixFree(b)
 basis(p::PoissonSolverMatrixFree) = p.basis
 Base.length(p::PoissonSolverMatrixFree) = length(p.basis)
 
-discretise(p::PoissonSolverMatrixFree, f) = f.(p.basis.xgrid[1:(end - 1)])
+function discretise(p::Union{PoissonSolverFFT, PoissonSolverMatrixFree}, f)
+    f.(p.basis.xgrid[1:(end - 1)])
+end
 
 # y = (-Δ + R) x
 function _apply_L!(y::AbstractVector, x::AbstractVector, p::PoissonSolverMatrixFree)
@@ -141,7 +143,7 @@ function _apply_L!(y::AbstractVector, x::AbstractVector, p::PoissonSolverMatrixF
 end
 
 function solve!(ϕ::AbstractVector, p::PoissonSolverMatrixFree, ρ::AbstractVector)
-    checklengths(ϕ, ρ, p)
+    checklengths(ϕ, p, ρ)
     r, d, Ld = p.r, p.d, p.Ld
 
     # r = (1 - R) ρ is the residual of the initial guess ϕ = 0.

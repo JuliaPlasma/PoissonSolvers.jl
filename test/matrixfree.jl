@@ -134,7 +134,7 @@ end
     @test_throws DimensionMismatch solve!(zeros(64), solver, zeros(63))
     @test_throws DimensionMismatch solve!(zeros(63), solver, zeros(64))
 
-    # Both element types, and a strided view at an offset, reach the same check.
+    # Both element types, and a contiguous view at an offset, reach the same check.
     for T in (Float64, Float32)
         solvert = PoissonSolver(FiniteDifferenceBasis(T.((0.0, 1.0)), 64))
         @test_throws DimensionMismatch solve!(zeros(T, 64), solvert, zeros(T, 63))
@@ -173,7 +173,7 @@ end
 end
 
 @testset "the function path reduces to the sampled vector path" begin
-    # As for the FFT backend: the function path samples the grid points the vector path uses, at
+    # The function path samples the grid points the vector path uses, so the two are `==`, at
     # both stencil orders and both element types.
     for T in (Float64, Float32)
         for order in (2, 4)
@@ -185,7 +185,7 @@ end
             @test solve(solver, f) == solve!(similar(rhs), solver, rhs)
             @test solve!(similar(rhs), solver, f) == solve!(similar(rhs), solver, rhs)
 
-            # A strided view at an offset is a valid right-hand side too.
+            # A contiguous view at an offset is a valid right-hand side too.
             wider = zeros(T, 65)
             wider[2:65] .= rhs
             @test solve!(similar(rhs), solver, view(wider, 2:65)) ==

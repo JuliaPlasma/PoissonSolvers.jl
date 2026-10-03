@@ -132,7 +132,7 @@ end
     @test_throws DimensionMismatch solve!(zeros(n), dirichlet, rand(8))
     @test_throws DimensionMismatch solve!(zeros(8), dirichlet, rand(n))
 
-    # A strided view at an offset reaches the same check as a plain vector.
+    # A contiguous view at an offset reaches the same check as a plain vector.
     long = zeros(40)
     @test_throws DimensionMismatch solve!(zeros(32), solver, view(long, 2:32))
     @test_throws DimensionMismatch solve!(view(long, 2:32), solver, rand(32))
@@ -176,7 +176,7 @@ end
         @test solve(solver, f) == solve!(similar(lv), solver, lv)
         @test solve!(similar(lv), solver, f) == solve!(similar(lv), solver, lv)
 
-        # A strided view at an offset is a valid right-hand side too.
+        # A contiguous view at an offset is a valid right-hand side too.
         wider = zeros(length(lv) + 1)
         wider[2:end] .= lv
         @test solve!(similar(lv), solver, view(wider, 2:length(wider))) ==

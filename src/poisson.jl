@@ -47,10 +47,10 @@ solver takes; for a spline, the Galerkin load vector.
 """
 function discretise end
 
-# Named here rather than left to the backend: without it a wrong length fails deeper — in a plan,
+# Each backend's `solve!` calls this first. Without it a wrong length fails deeper — in a plan,
 # a factorisation or a broadcast — or, in the Dirichlet spline, a short right-hand side is read
 # without complaint and answered as if it fit. Naming the three lengths says what disagrees.
-function checklengths(result, rhs, p::PoissonSolver)
+function checklengths(result, p::PoissonSolver, rhs)
     length(result) == length(rhs) == length(p) || throw(DimensionMismatch(
         "the solver has $(length(p)) degrees of freedom, but the right-hand side has " *
         "$(length(rhs)) and the result $(length(result))"))
