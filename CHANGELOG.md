@@ -16,6 +16,8 @@ makes it worth keeping. The record proper begins with the section below.
 
 ### Changed
 
+- CI uploads coverage from the `Julia 1 - ubuntu-latest` job instead of `Julia min`, and a test
+  job saves the Julia cache only when it succeeds.
 - The test suite follows the layout of the other JuliaGNI packages. `test/runtests.jl` holds one
   `core` group of `@safetestset` lines. Each test file mirrors the source file it tests:
   `test/poisson_fft.jl`, `test/poisson_spline.jl`, `test/matrixfree.jl` and `test/potential.jl`.
