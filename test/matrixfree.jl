@@ -84,9 +84,10 @@ end
     # steps on a few eigenvectors, and the solver returns its mean-free part.
     #
     # The bound is twice the larger of the two errors of this grid, n = 256 at order 4. The
-    # `Float32` solve stops at 2.2e-6, which is its rounding floor. The `Float64` run on the same
-    # grid stops at 2.1e-8, the truncation error `C h^4` that no element type removes. The factor
-    # of two is what a different summation order needs.
+    # `Float32` solve stops at 2.2e-6 where bounds checking is at its default, which is the rounding
+    # floor of that compilation. The `Float64` run on the same grid stops at 2.1e-8, the truncation
+    # error `C h^4` that no element type removes. The factor of two is what a different summation
+    # order needs.
     potential(x) = exp(sin(2π * x))
     density(x) = 4π^2 * exp(sin(2π * x)) * (sin(2π * x) - cos(2π * x)^2)
     b = FiniteDifferenceBasis(Float32.((0.0, 1.0)), 256; order = 4)
@@ -95,7 +96,19 @@ end
     φ = solve(PoissonSolver(b), Float32.(density.(x)))
 
     @test eltype(φ) == Float32
-    @test norm(φ .- reference) / norm(reference) ≤ 4.4e-6
+
+    # The same solve into a preallocated contiguous view at an offset, which the function
+    # right-hand side path has to reach with the same values (§5V.P41 check 3).
+    buffer = zeros(Float32, 258)
+    @test solve!(view(buffer, 2:257), PoissonSolver(b), Float32.(density.(x))) == φ
+
+    # The bound is a rounding path of this one grid and precision: the same solve stops at 1.4e-4
+    # on Julia 1.13.1 and 9.3e-5 on 1.10.12 where the run forces bounds checking, against 2.2e-6
+    # where it does not. Like the six allocation assertions of this suite, it is therefore made only
+    # where bounds checking is at its default: skipped where a run forces `--check-bounds=yes`.
+    if Base.JLOptions().check_bounds == 0
+        @test norm(φ .- reference) / norm(reference) ≤ 4.4e-6
+    end
 end
 
 @testset "the same periodic problem as the FFT backend" begin

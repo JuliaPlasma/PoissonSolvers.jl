@@ -109,7 +109,12 @@ function loadvector(p::PoissonSolverSpline, f)
     basis_values(q, 0) * (quadrature_weights(q) .* f.(quadrature_nodes(q)))
 end
 
-discretise(p::PoissonSolverSpline, f) = loadvector(p, x -> eltype(p)(f(x)))
+# The samples are converted here, once, to the solver's element type. `DT` is a type parameter of
+# this method rather than `eltype(p)` read inside the closure: with the value, the closure's return
+# type is not inferred before `loadvector` is specialised, and the same samples then cost 0.9 kB
+# more at n = 256 in `Float32` — the allocation clause of `test/verification/tight_solves.jl`
+# catches that.
+discretise(p::PoissonSolverSpline{DT}, f) where {DT} = loadvector(p, x -> DT(f(x)))
 
 function solve!(result::AbstractVector, p::PoissonSolverSpline, rhs::AbstractVector)
     checklengths(result, p, rhs)

@@ -71,6 +71,19 @@ if isdefined(JET, :JET_AVAILABLE) ? JET.JET_AVAILABLE :
         @test isempty(JET.get_reports(JET.report_opt(solve!,
             (Vector{Float32}, typeof(p), view32); target_modules = m)))
     end
+
+    # The view as the *result* of a function right-hand side, which the same file's conversion
+    # probe solves into as well. The function returns the other element type, as there.
+    other(x::Float32) = 2.0 * x
+    other(x::Float64) = Float32(2.0 * x)
+    for p in (fft32, periodic32, dirichlet32, grid32)
+        @test isempty(JET.get_reports(JET.report_opt(solve!,
+            (view32, typeof(p), typeof(other)); target_modules = m)))
+    end
+    for p in (fft64, periodic64, dirichlet64, grid64)
+        @test isempty(JET.get_reports(JET.report_opt(solve!,
+            (view64, typeof(p), typeof(other)); target_modules = m)))
+    end
 else
     @test_skip "JET does not work on Julia $VERSION"  # aviatesk/JET.jl#681
 end

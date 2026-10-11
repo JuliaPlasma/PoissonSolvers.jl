@@ -11,7 +11,7 @@
 
 using LinearAlgebra
 using PoissonSolvers
-using PoissonSolvers: _apply_Δₓ!, _apply_Δₓ₄!, loadvector
+using PoissonSolvers: _apply_Δₓ!, _apply_Δₓ₄!, discretise, loadvector
 using SimpleSplines
 using Test
 
@@ -86,22 +86,18 @@ function fft_column(b, ::Type{W}) where {W}
     return c
 end
 
-# `−Δ_h + R`, the operator the matrix-free solver inverts, column by column from the package's own
-# stencil, so that `opnorm` sees the matrix the residual does.
+# `−Δ_h + R`, the operator the matrix-free solver inverts: the first column from the package's own
+# stencil, circulated, so that `opnorm` sees the matrix the residual does. The periodic stencil is
+# shift-invariant, so one column is the whole matrix.
 function difference_operator(p::PoissonSolverMatrixFree, ::Type{W}) where {W}
     b = basis(p)
     n = length(b)
     h = W(b.Δx)
     x = zeros(W, n)
     y = similar(x)
-    A = Matrix{W}(undef, n, n)
-    for j in 1:n
-        x[j] = one(W)
-        b.order == 2 ? _apply_Δₓ!(y, x, h) : _apply_Δₓ₄!(y, x, h)
-        A[:, j] .= sum(x) / n .- y
-        x[j] = zero(W)
-    end
-    return A
+    x[1] = one(W)
+    b.order == 2 ? _apply_Δₓ!(y, x, h) : _apply_Δₓ₄!(y, x, h)
+    return circulant(sum(x) / n .- y)
 end
 
 # The discrete operator each backend inverts, dense and in `W`.
@@ -170,24 +166,51 @@ float32_samples(x) = Float32(exp(sin(2π * x)))
 other_element(::Type{Float32}) = float64_samples
 other_element(::Type{Float64}) = float32_samples
 
-# The bytes `solve!` allocates for a function right-hand side, through a function barrier. Only
-# the samples are at stake: the result is preallocated.
-function samples_allocation(φ, p, f)
-    solve!(φ, p, f)
-    return @allocated solve!(φ, p, f)
+# The bytes the samples of a function right-hand side cost, through a function barrier. The result
+# is preallocated, so only the samples are at stake — and both sides are then one call that returns
+# a vector, so that no frame of the `solve!` path is counted on one side only.
+function samples_allocation(p, f)
+    discretise(p, f)
+    return @allocated discretise(p, f)
 end
 
-# Check 3 for one backend and one `f`: the element type, the reduction to it, and the allocation
-# of the samples. `T` is a type parameter, so `@inferred` sees a fixed one.
+# The unfixed tree's own conversion, which is the baseline the clause names: the caller converts
+# the samples in `T` themselves. It must not go through the tree's hook — under a conversion
+# written as `T.(f.(x))` the hook moves with the mutant, and the comparison then measures the
+# mutant against itself.
+function typed_samples(p, f, ::Type{T}) where {T}
+    b = basis(p)
+    return b isa AbstractBSplineBasis ? loadvector(p, in_element(f, T)) :
+           in_element(f, T).(b.xgrid[1:(end - 1)])
+end
+
+function baseline_allocation(p, f, ::Type{T}) where {T}
+    typed_samples(p, f, T)
+    return @allocated typed_samples(p, f, T)
+end
+
+# Check 3 for one backend and one `f`: the element type, the reduction to it, the movement of a
+# preallocated result, and the allocation of the samples. `T` is a type parameter, so `@inferred`
+# sees a fixed one. Each run covers the `Vector` the solver returns and the unit-stride view of
+# check 1, whose result the function path must reach too.
 function conversion_probe(p, f, ::Type{T}) where {T}
+    n = length(p)
     φ = @inferred solve(p, f)
     @test eltype(φ) === T
     @test φ == solve(p, reference(p, T, f))
 
-    # Reducing `f` costs one vector of `T`, whatever `f` returns: the caller's own conversion
-    # allocates no less.
-    @test samples_allocation(similar(φ), p, f) ≤
-          samples_allocation(similar(φ), p, in_element(f, T))
+    # Reducing `f` costs no more than the caller's own conversion, whatever `f` returns.
+    @test samples_allocation(p, f) ≤ baseline_allocation(p, f, T)
+
+    for shape in (:vector, :view)
+        # The buffer starts away from the solution values, so a `solve!` that returns it untouched
+        # does not reach the reference.
+        buffer = fill(T(7), shape === :vector ? n : n + 2)
+        out = shape === :vector ? buffer : view(buffer, 2:(n + 1))
+
+        @test solve!(out, p, f) === out
+        @test out == solve(p, reference(p, T, f))
+    end
     return nothing
 end
 

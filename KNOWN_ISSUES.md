@@ -36,3 +36,15 @@
   blocks are not test failures, and the test totals do not change.
 - **kind:** upstream
 - **found:** 2026-10-01
+
+### K4 · A constant right-hand side near `floatmax` solves to `NaN`, not to zero.
+
+- **location:** `src/poisson_fft.jl:131`
+- **evidence:** `solve(PoissonSolver(FFTWBasis(T.((0, 1)), 64)), x -> floatmax(T) / 2)` returns a
+  vector that is not all finite, in `Float32` and in `Float64`. A constant is in the kernel of the
+  periodic operator and the k = 0 factor is zero instead of `1/k²`, so the mean-free solution is
+  zero; the transform's range instead overflows the DC mode and `Inf * 0` reaches the result. The
+  input is outside the density and scale domain of `test/verification/tight_solves.jl` (`1`, `3e-8`,
+  `3e8`). `origin/main` at `6146203` fails identically, so the branch does not introduce it.
+- **kind:** found late
+- **found:** 2026-10-11
