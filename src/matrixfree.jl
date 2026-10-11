@@ -134,11 +134,31 @@ function discretise(p::Union{PoissonSolverFFT, PoissonSolverMatrixFree}, f)
     eltype(p)[f(x) for x in p.basis.xgrid[1:(end - 1)]]
 end
 
+# The compensated (Neumaier) sum of `x`, which the two reductions of the solver use in place of
+# `sum`. Base's `sum` reaches an `@simd` loop whose `@inbounds` a run that forces
+# `--check-bounds=yes` ignores, so its order — and the accuracy of a `Float32` solve below —
+# depends on how the run was started. This reduction is the same in either mode.
+function _sum(x)
+    s = zero(eltype(x))
+    c = zero(s)
+    @inbounds for v in x
+        t = s + v
+        c += abs(s) ≥ abs(v) ? (s - t) + v : (v - t) + s
+        s = t
+    end
+    return s + c
+end
+
+# The mean-free solution the backend returns. The constant mode is the least damped one of `-Δ + R`
+# — its eigenvalue is 1, against 39.5 and up for the oscillating ones — so the rounding of the
+# iteration collects a constant that no residual of the iteration sees.
+_mean_free!(ϕ) = (ϕ .-= _sum(ϕ) / length(ϕ); ϕ)
+
 # y = (-Δ + R) x
 function _apply_L!(y::AbstractVector, x::AbstractVector, p::PoissonSolverMatrixFree)
     b = p.basis
     b.order == 2 ? _apply_Δₓ!(y, x, b.Δx) : _apply_Δₓ₄!(y, x, b.Δx)
-    y .= sum(x) / length(x) .- y
+    y .= _sum(x) / length(x) .- y
     return y
 end
 
@@ -147,14 +167,14 @@ function solve!(ϕ::AbstractVector, p::PoissonSolverMatrixFree, ρ::AbstractVect
     r, d, Ld = p.r, p.d, p.Ld
 
     # r = (1 - R) ρ is the residual of the initial guess ϕ = 0.
-    r .= ρ .- sum(ρ) / length(ρ)
+    r .= ρ .- _sum(ρ) / length(ρ)
     ϕ .= 0
     d .= r
     rr = rr₀ = dot(r, r)
     tolerance = p.reltol^2 * rr₀
 
     for _ in 1:(p.maxiter)
-        rr ≤ tolerance && return ϕ
+        rr ≤ tolerance && return _mean_free!(ϕ)
         _apply_L!(Ld, d, p)
         α = rr / dot(d, Ld)
         ϕ .+= α .* d
@@ -165,5 +185,5 @@ function solve!(ϕ::AbstractVector, p::PoissonSolverMatrixFree, ρ::AbstractVect
 
     rr ≤ tolerance || error("conjugate gradients did not reach a relative residual of " *
           "$(p.reltol) in $(p.maxiter) iterations; it stopped at $(sqrt(rr / rr₀))")
-    return ϕ
+    return _mean_free!(ϕ)
 end

@@ -37,8 +37,9 @@ makes it worth keeping. The record proper begins with the section below.
   is the first version that accepts AbstractFFTs 1. The upper bound is unchanged, so this changes
   nothing for an install that resolved before.
 - The one `Float32` accuracy bound in `test/matrixfree.jl` is `4.4e-6`, tightened from `1e-3`:
-  twice the larger of the measured `Float32` error at n = 256 (2.2e-6) and the `Float64` truncation
-  error on the same grid (2.1e-8).
+  1.7 times the larger of the two measured `Float32` errors of that grid (n = 256, fourth order),
+  which are 2.5858e-6 on Julia 1.10.12 and 1.6735e-6 on 1.13.1. It is above the `Float64`
+  truncation error on the same grid (2.1e-8).
 - `test/verification/tight_solves.jl` is new and runs in the `core` group. Unlike the files above, it
   mirrors no source file. It bounds the normwise backward error of the discrete equation,
   `‖b − Aφ‖∞ / (‖A‖∞‖φ‖∞ + ‖b‖∞)`, evaluated in `widen(T)`, by `16·eps(T)`. It covers the FFT,
@@ -67,6 +68,15 @@ makes it worth keeping. The record proper begins with the section below.
   `eltype(solve(p, f)) === eltype(p)`, and `solve(p, f)` equals the solve of the same samples
   converted to `eltype(p)` by the caller. `Base.eltype` is defined for a `PoissonSolver` and returns
   its element type; the `discretise` docstring states the contract.
+
+- **The matrix-free solver's `Float32` accuracy no longer depends on bounds checking.** Its two
+  reductions now sum with a compensated (Neumaier) sum, `_sum`, instead of `sum`, and `solve!`
+  projects the constant mode out of the solution it returns, using the same sum, before each of its
+  returns. Before, the same n = 256 solve gave an error of 9.2580e-5 on Julia 1.10.12 and 1.4241e-4
+  on 1.13.1 under `--check-bounds=yes`, against 2.15e-6 without the flag, so the same call returned
+  a different `Float32` answer depending on how Julia was started. The error is now the same whether
+  or not the run forces bounds checking. The `Float64` solution changes in its last bits; its n = 256
+  error stays at 2.053e-8.
 
 ## [0.6.0] — 2026-09-23
 

@@ -1,5 +1,5 @@
 using PoissonSolvers
-using PoissonSolvers: _apply_L!, _apply_Δₓ!, _apply_Δₓ₄!, _apply_Rₓ!
+using PoissonSolvers: _apply_L!, _apply_Δₓ!, _apply_Δₓ₄!, _apply_Rₓ!, _sum
 using LinearAlgebra
 using Random
 using Test
@@ -83,11 +83,12 @@ end
     # solution. exp(sin(2πx)) has every Fourier mode, so conjugate gradients cannot finish in a few
     # steps on a few eigenvectors, and the solver returns its mean-free part.
     #
-    # The bound is twice the larger of the two errors of this grid, n = 256 at order 4. The
-    # `Float32` solve stops at 2.2e-6 where bounds checking is at its default, which is the rounding
-    # floor of that compilation. The `Float64` run on the same grid stops at 2.1e-8, the truncation
-    # error `C h^4` that no element type removes. The factor of two is what a different summation
-    # order needs.
+    # The bound is 1.7 times the measured `Float32` floor of this grid, n = 256 at order 4: 2.5858e-6
+    # on Julia 1.10.12 and 1.6735e-6 on 1.13.1, and above the `Float64` truncation error `C h^4` of
+    # 2.1e-8 on the same grid. The compensated sum and the projection of the mean leave that value
+    # the same in its first twelve significant digits whether a run forces `--check-bounds=yes` or
+    # not — what moves in the last ones is this test's own `Float64` sum of the reference — so the
+    # bound needs no guard.
     potential(x) = exp(sin(2π * x))
     density(x) = 4π^2 * exp(sin(2π * x)) * (sin(2π * x) - cos(2π * x)^2)
     b = FiniteDifferenceBasis(Float32.((0.0, 1.0)), 256; order = 4)
@@ -102,13 +103,7 @@ end
     buffer = zeros(Float32, 258)
     @test solve!(view(buffer, 2:257), PoissonSolver(b), Float32.(density.(x))) == φ
 
-    # The bound is a rounding path of this one grid and precision: the same solve stops at 1.4e-4
-    # on Julia 1.13.1 and 9.3e-5 on 1.10.12 where the run forces bounds checking, against 2.2e-6
-    # where it does not. Like the six allocation assertions of this suite, it is therefore made only
-    # where bounds checking is at its default: skipped where a run forces `--check-bounds=yes`.
-    if Base.JLOptions().check_bounds == 0
-        @test norm(φ .- reference) / norm(reference) ≤ 4.4e-6
-    end
+    @test norm(φ .- reference) / norm(reference) ≤ 4.4e-6
 end
 
 @testset "the same periodic problem as the FFT backend" begin
@@ -188,6 +183,19 @@ end
             @test bytes == 0
         end
     end
+end
+
+@testset "the compensated sum" begin
+    # The projection of the mean-free solution is only as good as the sum it uses: `sum` reaches
+    # Base's `@simd` loop, whose `@inbounds` a run that forces `--check-bounds=yes` ignores, so the
+    # summation order — and with it the `Float32` accuracy of the solve — moves with the run.
+    # Neumaier keeps the 254 ones the 1e8 swallows, in either mode, from a vector and from a view.
+    x = [1.0f8; fill(1.0f0, 254); -1.0f8]
+    @test _sum(x) == 254
+
+    wider = zeros(Float32, length(x) + 2)
+    wider[2:(end - 1)] .= x
+    @test _sum(view(wider, 2:(length(x) + 1))) == 254
 end
 
 @testset "the function path reduces to the sampled vector path" begin
