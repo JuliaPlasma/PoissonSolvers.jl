@@ -1,5 +1,7 @@
 abstract type PoissonSolver{dType} end
 
+Base.eltype(::Type{<:PoissonSolver{DT}}) where {DT} = DT
+
 """
     PoissonSolver(basis)
 
@@ -44,6 +46,9 @@ function solve! end
 
 The discrete right-hand side of the function `f` on `solver`'s basis: for a grid, the samples the
 solver takes; for a spline, the Galerkin load vector.
+
+The samples are of the solver's own element type, whatever `f` returns, so that a `Float32` solve
+of a `Float64`-valued `f` stays `Float32`.
 """
 function discretise end
 

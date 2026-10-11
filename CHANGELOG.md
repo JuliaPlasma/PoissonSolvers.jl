@@ -36,6 +36,20 @@ makes it worth keeping. The record proper begins with the section below.
   SimpleSplines version needs a ContinuumArrays release that requires AbstractFFTs 1. FFTW 1.3.1
   is the first version that accepts AbstractFFTs 1. The upper bound is unchanged, so this changes
   nothing for an install that resolved before.
+- The one `Float32` accuracy bound in `test/matrixfree.jl` is `4.4e-6`, tightened from `1e-3`:
+  twice the larger of the measured `Float32` error at n = 256 (2.2e-6) and the `Float64` truncation
+  error on the same grid (2.1e-8).
+- `test/verification/tight_solves.jl` is new and runs in the `core` group. Unlike the files above, it
+  mirrors no source file. It bounds the normwise backward error of the discrete equation,
+  `‖b − Aφ‖∞ / (‖A‖∞‖φ‖∞ + ‖b‖∞)`, evaluated in `widen(T)`, by `16·eps(T)`. It covers the FFT,
+  matrix-free (orders 2 and 4), and periodic and Dirichlet spline (orders 2 to 5) backends, in
+  `Float32` and `Float64`, at three scales of the right-hand side, with the right-hand side given as
+  a vector and as a view. It also checks the element-type conversion on each backend.
+- `test/quality/jet.jl` also gets `report_opt` lines for the `Float32` and the unit-stride-view
+  right-hand sides that `tight_solves.jl` solves.
+- The `Float32` periodic spline known issue, K2 in `KNOWN_ISSUES.md`, is narrowed: a `Float32`
+  periodic spline builds at n = 256 for orders 2 to 5, and is still rejected at n = 512 (order 2)
+  and n = 1024 (order 4). K2 stays in the file, as an upstream issue.
 
 ### Bug Fixes
 
@@ -43,6 +57,16 @@ makes it worth keeping. The record proper begins with the section below.
   the same `DimensionMismatch` everywhere, naming the solver's length and the two it was given.
   The FFT backend let FFTW raise a wrong-plan `ArgumentError`; the spline and matrix-free backends
   already threw the `DimensionMismatch`.
+
+- **A solve of a function reduces its samples to the solver's element type.** Each backend's
+  `discretise` hook, the one `solve!` and `solve` path that every backend shares, converts the
+  samples of a function right-hand side to the solver's element type, whatever the function
+  returns. A `Float32` solve of a function whose values are `Float64` no longer throws a
+  `MethodError` on the FFT backend or on a periodic spline, and no longer returns a `Float64`
+  coefficient vector on the matrix-free and Dirichlet spline backends. On every backend,
+  `eltype(solve(p, f)) === eltype(p)`, and `solve(p, f)` equals the solve of the same samples
+  converted to `eltype(p)` by the caller. `Base.eltype` is defined for a `PoissonSolver` and returns
+  its element type; the `discretise` docstring states the contract.
 
 ## [0.6.0] — 2026-09-23
 

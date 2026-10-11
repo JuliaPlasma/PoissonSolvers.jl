@@ -109,7 +109,7 @@ function loadvector(p::PoissonSolverSpline, f)
     basis_values(q, 0) * (quadrature_weights(q) .* f.(quadrature_nodes(q)))
 end
 
-discretise(p::PoissonSolverSpline, f) = loadvector(p, f)
+discretise(p::PoissonSolverSpline, f) = loadvector(p, x -> eltype(p)(f(x)))
 
 function solve!(result::AbstractVector, p::PoissonSolverSpline, rhs::AbstractVector)
     checklengths(result, p, rhs)

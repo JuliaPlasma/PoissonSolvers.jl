@@ -131,7 +131,7 @@ basis(p::PoissonSolverMatrixFree) = p.basis
 Base.length(p::PoissonSolverMatrixFree) = length(p.basis)
 
 function discretise(p::Union{PoissonSolverFFT, PoissonSolverMatrixFree}, f)
-    f.(p.basis.xgrid[1:(end - 1)])
+    eltype(p)[f(x) for x in p.basis.xgrid[1:(end - 1)]]
 end
 
 # y = (-Δ + R) x

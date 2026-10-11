@@ -12,15 +12,16 @@
 - **kind:** upstream
 - **found:** 2026-09-14
 
-### K2 · A periodic spline solver cannot be built at `Float32`.
+### K2 · A `Float32` periodic spline is rejected at a fine resolution.
 
 - **location:** —
-- **evidence:** `SimpleSplines.CirculantMass` checks
-  that the assembled mass matrix is circulant against an absolute tolerance of `1e-10`, which
-  `Float32` assembly noise exceeds, so construction fails with `ArgumentError: the mass matrix is
-  not circulant to within 1.0e-10` before this package sees the matrix. The tolerance needs to
-  scale with `eps(eltype)` upstream. The `Float32` Dirichlet spline and `Float32` grid solvers both
-  work.
+- **evidence:** `SimpleSplines`' `_reciprocal_eigenvalues` treats an eigenvalue below
+  `n * eps(T) * maximum(abs, ĉ)` as zero, which is `pinv`'s own relative cutoff, and the smallest
+  nonzero eigenvalue of a periodic stiffness matrix falls under it at a fine resolution. A
+  `PeriodicBasisSpline` at `Float32` builds at n = 256 for orders 2 to 5, and fails with
+  `ArgumentError: the matrix is singular beyond the constants: a second mode of the transform
+  vanishes as well` at n = 512 at order 2 and at n = 1024 at order 4. The `Float32` Dirichlet
+  spline and the `Float32` grid solvers build at n = 256, 512 and 1024. The fix is upstream.
 - **kind:** upstream
 - **found:** 2026-09-14
 

@@ -82,6 +82,11 @@ end
     # `reltol` bounds the residual, not the error, so this checks the error against the analytic
     # solution. exp(sin(2πx)) has every Fourier mode, so conjugate gradients cannot finish in a few
     # steps on a few eigenvectors, and the solver returns its mean-free part.
+    #
+    # The bound is twice the larger of the two errors of this grid, n = 256 at order 4. The
+    # `Float32` solve stops at 2.2e-6, which is its rounding floor. The `Float64` run on the same
+    # grid stops at 2.1e-8, the truncation error `C h^4` that no element type removes. The factor
+    # of two is what a different summation order needs.
     potential(x) = exp(sin(2π * x))
     density(x) = 4π^2 * exp(sin(2π * x)) * (sin(2π * x) - cos(2π * x)^2)
     b = FiniteDifferenceBasis(Float32.((0.0, 1.0)), 256; order = 4)
@@ -90,7 +95,7 @@ end
     φ = solve(PoissonSolver(b), Float32.(density.(x)))
 
     @test eltype(φ) == Float32
-    @test norm(φ .- reference) / norm(reference) ≤ 1e-3
+    @test norm(φ .- reference) / norm(reference) ≤ 4.4e-6
 end
 
 @testset "the same periodic problem as the FFT backend" begin
