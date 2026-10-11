@@ -1,6 +1,5 @@
-# The `Float32` solves of every backend on one grid: the normwise backward error of the discrete
-# equation (T2.4's *Done when*, §5V.P41 check 1), and the element type a function right-hand side
-# is reduced in (check 3).
+# Tight solves of every backend: the normwise backward error of the discrete equation and
+# conversion of a function right-hand side to the solver's element type.
 #
 # The file tests three source files — `matrixfree.jl`, `poisson_fft.jl` and `poisson_spline.jl` —
 # so it sits in `test/verification/` rather than beside any one of them.
@@ -15,8 +14,7 @@ using PoissonSolvers: _apply_Δₓ!, _apply_Δₓ₄!, discretise, loadvector
 using SimpleSplines
 using Test
 
-# The grid every backend is checked on. It is the size the suite's `Float32` accuracy is measured
-# at, and the largest at which a `Float32` periodic spline basis still builds.
+# The grid of the suite's `Float32` accuracy test; every backend here builds at this size.
 const NSOLVE = 256
 
 # A density with every Fourier mode, so that no backend passes on a grid that happens to resolve a
@@ -34,8 +32,8 @@ function reference(p, ::Type{T}, f) where {T}
     T.(f.(basis(p).xgrid[1:(end - 1)]))
 end
 
-# The eleven backend configurations check 1 names: the FFT backend, the matrix-free backend at
-# both stencil orders, and the periodic and Dirichlet spline backends at orders 2 to 5.
+# Eleven backend configurations: FFT, both matrix-free stencil orders, and periodic and
+# Dirichlet splines at orders 2 to 5.
 function backends(::Type{T}) where {T}
     domain = T.((0.0, 1.0))
     return (("FFT", PoissonSolverFFT(FFTWBasis(domain, NSOLVE))),
@@ -107,9 +105,9 @@ function operator(p, ::Type{W}) where {W}
     b isa FiniteDifferenceBasis && return difference_operator(p, W)
     S = stiffness_matrix(p.quadrature)
     if b isa PeriodicBSplineBasis
-        # What `SimpleSplines.CirculantMass` inverts is the circulant of `M[:, 1]`, not the
-        # assembled stiffness matrix, which deviates from circulant by up to 457 eps; the mean
-        # projection is what makes that circulant nonsingular.
+        # `SimpleSplines.CirculantMass` inverts the circulant of the first stiffness column,
+        # not the assembled matrix, which can deviate from circulant through rounding.
+        # Adding the mean projection makes the constant mode nonsingular.
         return circulant(W.(Matrix(S)[:, 1])) .+ one(W) / length(p)
     end
     return W.(Matrix(S))
@@ -166,18 +164,15 @@ float32_samples(x) = Float32(exp(sin(2π * x)))
 other_element(::Type{Float32}) = float64_samples
 other_element(::Type{Float64}) = float32_samples
 
-# The bytes the samples of a function right-hand side cost, through a function barrier. The result
-# is preallocated, so only the samples are at stake — and both sides are then one call that returns
-# a vector, so that no frame of the `solve!` path is counted on one side only.
+# Allocation of the sampled right-hand side through a function barrier. Both readings return
+# a fresh vector and exclude the solve into the caller's preallocated result.
 function samples_allocation(p, f)
     discretise(p, f)
     return @allocated discretise(p, f)
 end
 
-# The unfixed tree's own conversion, which is the baseline the clause names: the caller converts
-# the samples in `T` themselves. It must not go through the tree's hook — under a conversion
-# written as `T.(f.(x))` the hook moves with the mutant, and the comparison then measures the
-# mutant against itself.
+# An independent baseline: the caller converts each sample to `T`. Avoid `discretise` here so
+# that changing its implementation cannot also change the reference allocation.
 function typed_samples(p, f, ::Type{T}) where {T}
     b = basis(p)
     return b isa AbstractBSplineBasis ? loadvector(p, in_element(f, T)) :
@@ -203,10 +198,9 @@ function complete_allocation(out::O, p::P, f::F) where {O, P, F}
     return bytes
 end
 
-# The same path on the unfixed tree — the caller makes the samples in `T` themselves and `solve!`
-# moves them into `out` — so that the two readings differ by the reduction alone. It calls neither
-# `discretise` nor `reference`, so a hook written as `T.(f.(x))` cannot move with the expression it
-# is measured against.
+# The independent complete-path baseline: the caller samples in `T`, then solves into `out`.
+# It uses neither `discretise` nor `reference`, keeping the allocation comparison independent
+# of the hook under test.
 function typed_allocation(out::O, p::P, f::F, ::Type{T}) where {O, P, F, T}
     solve!(out, p, typed_samples(p, f, T))
     bytes = typemax(Int)
@@ -216,10 +210,9 @@ function typed_allocation(out::O, p::P, f::F, ::Type{T}) where {O, P, F, T}
     return bytes
 end
 
-# Check 3 for one backend and one `f`: the element type, the reduction to it, the movement of a
-# preallocated result, and the allocation of the samples. `T` is a type parameter, so `@inferred`
-# sees a fixed one. Each run covers the `Vector` the solver returns and the unit-stride view of
-# check 1, whose result the function path must reach too.
+# Check the element type, sample conversion, preallocated result and allocations for one backend.
+# `T` is a type parameter, so `@inferred` sees a fixed type. Cover both a vector result and a
+# contiguous result view at an offset.
 function conversion_probe(p, f, ::Type{T}) where {T}
     n = length(p)
     φ = @inferred solve(p, f)

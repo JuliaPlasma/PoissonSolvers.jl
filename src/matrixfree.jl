@@ -134,10 +134,8 @@ function discretise(p::Union{PoissonSolverFFT, PoissonSolverMatrixFree}, f)
     eltype(p)[f(x) for x in p.basis.xgrid[1:(end - 1)]]
 end
 
-# The compensated (Neumaier) sum of `x`, which the two reductions of the solver use in place of
-# `sum`. Base's `sum` reaches an `@simd` loop whose `@inbounds` a run that forces
-# `--check-bounds=yes` ignores, so its order — and the accuracy of a `Float32` solve below —
-# depends on how the run was started. This reduction is the same in either mode.
+# Neumaier summation for the right-hand side, operator and solution projections. A sequential
+# compensated reduction keeps their `Float32` accuracy independent of bounds-checking mode.
 function _sum(x)
     s = zero(eltype(x))
     c = zero(s)
@@ -149,9 +147,9 @@ function _sum(x)
     return s + c
 end
 
-# The mean-free solution the backend returns. The constant mode is the least damped one of `-Δ + R`
-# — its eigenvalue is 1, against 39.5 and up for the oscillating ones — so the rounding of the
-# iteration collects a constant that no residual of the iteration sees.
+# Remove the constant mode from the returned solution. Its eigenvalue in `-Δ + R` is 1, whereas
+# the first oscillating mode is approximately `(2π / L)^2` on a domain of length `L`. Rounding
+# can leave a constant component even when the iteration meets its residual tolerance.
 _mean_free!(ϕ) = (ϕ .-= _sum(ϕ) / length(ϕ); ϕ)
 
 # y = (-Δ + R) x

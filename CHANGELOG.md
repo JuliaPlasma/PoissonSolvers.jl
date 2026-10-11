@@ -70,8 +70,10 @@ makes it worth keeping. The record proper begins with the section below.
   its element type; the `discretise` docstring states the contract.
 
 - **A preallocated function solve no longer dispatches at run time.** `solve!(φ, p, f)` now
-  specialises on `f`. Its right-hand side was typed `Base.Callable`, an abstract type, so the method
-  was not specialised on it and every call paid a runtime dispatch of `discretise` before the solve
+  specialises on `f`. Its right-hand side was typed `Base.Callable`, which is `Union{Function, Type}`,
+  a union of two abstract types rather than an abstract type itself. A method typed on that union has
+  no type parameter for the function, so the method was not specialised on it and every call paid a
+  runtime dispatch of `discretise` before the solve
   began. The function is now a type parameter of the method, so the reduction of `f` is compiled
   into the call that asked for it: a preallocated function solve allocates only the samples.
 

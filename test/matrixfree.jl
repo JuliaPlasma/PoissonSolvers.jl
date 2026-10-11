@@ -83,12 +83,10 @@ end
     # solution. exp(sin(2πx)) has every Fourier mode, so conjugate gradients cannot finish in a few
     # steps on a few eigenvectors, and the solver returns its mean-free part.
     #
-    # The bound is 1.7 times the measured `Float32` floor of this grid, n = 256 at order 4: 2.5858e-6
-    # on Julia 1.10.12 and 1.6735e-6 on 1.13.1, and above the `Float64` truncation error `C h^4` of
-    # 2.1e-8 on the same grid. The compensated sum and the projection of the mean leave that value
-    # the same in its first twelve significant digits whether a run forces `--check-bounds=yes` or
-    # not — what moves in the last ones is this test's own `Float64` sum of the reference — so the
-    # bound needs no guard.
+    # The bound is 1.7 times the measured `Float32` floor of this grid, n = 256 at order 4, which is
+    # 2.5858e-6 on Julia 1.10.12 and 1.6735e-6 on 1.13.1, and above the `Float64` truncation error
+    # `C h^4` of 2.1e-8 on the same grid. Compensated summation and the mean-free projection keep it
+    # valid with bounds checking either enabled or disabled, so the bound needs no guard.
     potential(x) = exp(sin(2π * x))
     density(x) = 4π^2 * exp(sin(2π * x)) * (sin(2π * x) - cos(2π * x)^2)
     b = FiniteDifferenceBasis(Float32.((0.0, 1.0)), 256; order = 4)
@@ -98,8 +96,7 @@ end
 
     @test eltype(φ) == Float32
 
-    # The same solve into a preallocated contiguous view at an offset, which the function
-    # right-hand side path has to reach with the same values (§5V.P41 check 3).
+    # The same solve into a preallocated contiguous view at an offset.
     buffer = zeros(Float32, 258)
     @test solve!(view(buffer, 2:257), PoissonSolver(b), Float32.(density.(x))) == φ
 

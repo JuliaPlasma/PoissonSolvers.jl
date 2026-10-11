@@ -45,6 +45,6 @@
   periodic operator and the k = 0 factor is zero instead of `1/k²`, so the mean-free solution is
   zero; the transform's range instead overflows the DC mode and `Inf * 0` reaches the result. The
   input is outside the density and scale domain of `test/verification/tight_solves.jl` (`1`, `3e-8`,
-  `3e8`). `origin/main` at `6146203` fails identically, so the branch does not introduce it.
+  `3e8`).
 - **kind:** found late
-- **found:** 2026-10-11
+- **found:** 2026-10-11; reproduced on base commit `6146203` as well as this branch.
