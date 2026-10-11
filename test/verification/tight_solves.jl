@@ -189,6 +189,33 @@ function baseline_allocation(p, f, ::Type{T}) where {T}
     return @allocated typed_samples(p, f, T)
 end
 
+# The bytes the whole preallocated function path costs: `solve!` reduces `f` and moves the result
+# into the caller's own `out`. `out` is one of the caller's buffers on both sides of the
+# comparison below, so the movement cancels and what is left is the right-hand side. The least of
+# five warmed readings, because an `@allocated` that reaches `exp` or `inv` differs by 16–48 B
+# between calls on Windows, and CI runs `windows-latest`.
+function complete_allocation(out::O, p::P, f::F) where {O, P, F}
+    solve!(out, p, f)
+    bytes = typemax(Int)
+    for _ in 1:5
+        bytes = min(bytes, @allocated solve!(out, p, f))
+    end
+    return bytes
+end
+
+# The same path on the unfixed tree — the caller makes the samples in `T` themselves and `solve!`
+# moves them into `out` — so that the two readings differ by the reduction alone. It calls neither
+# `discretise` nor `reference`, so a hook written as `T.(f.(x))` cannot move with the expression it
+# is measured against.
+function typed_allocation(out::O, p::P, f::F, ::Type{T}) where {O, P, F, T}
+    solve!(out, p, typed_samples(p, f, T))
+    bytes = typemax(Int)
+    for _ in 1:5
+        bytes = min(bytes, @allocated solve!(out, p, typed_samples(p, f, T)))
+    end
+    return bytes
+end
+
 # Check 3 for one backend and one `f`: the element type, the reduction to it, the movement of a
 # preallocated result, and the allocation of the samples. `T` is a type parameter, so `@inferred`
 # sees a fixed one. Each run covers the `Vector` the solver returns and the unit-stride view of
@@ -210,6 +237,11 @@ function conversion_probe(p, f, ::Type{T}) where {T}
 
         @test solve!(out, p, f) === out
         @test out == solve(p, reference(p, T, f))
+
+        # The whole call, not only the reduction above: a function path that copies the
+        # right-hand side on its way into `out` costs one buffer more than the caller's own
+        # conversion does.
+        @test complete_allocation(out, p, f) ≤ typed_allocation(out, p, f, T)
     end
     return nothing
 end

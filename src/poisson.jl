@@ -62,7 +62,7 @@ function checklengths(result, p::PoissonSolver, rhs)
     return nothing
 end
 
-function solve!(coeffs::AbstractVector, p::PoissonSolver, rhs::Base.Callable)
+function solve!(coeffs::AbstractVector, p::PoissonSolver, rhs::F) where {F <: Base.Callable}
     solve!(coeffs, p, discretise(p, rhs))
 end
 solve(p::PoissonSolver, rhs::AbstractVector) = solve!(similar(rhs), p, rhs)

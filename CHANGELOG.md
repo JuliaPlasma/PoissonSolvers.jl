@@ -69,6 +69,12 @@ makes it worth keeping. The record proper begins with the section below.
   converted to `eltype(p)` by the caller. `Base.eltype` is defined for a `PoissonSolver` and returns
   its element type; the `discretise` docstring states the contract.
 
+- **A preallocated function solve no longer dispatches at run time.** `solve!(φ, p, f)` now
+  specialises on `f`. Its right-hand side was typed `Base.Callable`, an abstract type, so the method
+  was not specialised on it and every call paid a runtime dispatch of `discretise` before the solve
+  began. The function is now a type parameter of the method, so the reduction of `f` is compiled
+  into the call that asked for it: a preallocated function solve allocates only the samples.
+
 - **The matrix-free solver's `Float32` accuracy no longer depends on bounds checking.** Its two
   reductions now sum with a compensated (Neumaier) sum, `_sum`, instead of `sum`, and `solve!`
   projects the constant mode out of the solution it returns, using the same sum, before each of its
