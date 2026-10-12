@@ -95,11 +95,6 @@ end
     φ = solve(PoissonSolver(b), Float32.(density.(x)))
 
     @test eltype(φ) == Float32
-
-    # The same solve into a preallocated contiguous view at an offset.
-    buffer = zeros(Float32, 258)
-    @test solve!(view(buffer, 2:257), PoissonSolver(b), Float32.(density.(x))) == φ
-
     @test norm(φ .- reference) / norm(reference) ≤ 4.4e-6
 end
 

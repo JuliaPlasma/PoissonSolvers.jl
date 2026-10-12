@@ -70,17 +70,18 @@ makes it worth keeping. The record proper begins with the section below.
   its element type; the `discretise` docstring states the contract.
 
 - **A preallocated function solve no longer dispatches at run time.** `solve!(φ, p, f)` now
-  specialises on `f`. Its right-hand side was typed `Base.Callable`, which is `Union{Function, Type}`,
-  a union of two abstract types rather than an abstract type itself. A method typed on that union has
-  no type parameter for the function, so the method was not specialised on it and every call paid a
-  runtime dispatch of `discretise` before the solve
-  began. The function is now a type parameter of the method, so the reduction of `f` is compiled
-  into the call that asked for it: a preallocated function solve allocates only the samples.
+  specialises on `f`. Its right-hand side was declared `Base.Callable` rather than as a type
+  parameter. Julia's specialisation heuristic does not specialise a method on an argument declared
+  with such a type when the method only passes it on to another function without calling it. So the
+  method was not specialised on `f`, and every call paid a runtime dispatch of `discretise` before
+  the solve began. The right-hand side is now a type parameter, `rhs::F where {F <: Base.Callable}`,
+  which forces the specialisation, so the reduction of `f` is compiled into the call that asked for
+  it: a preallocated function solve allocates only the samples.
 
 - **The matrix-free solver's `Float32` accuracy no longer depends on bounds checking.** Its two
   reductions now sum with a compensated (Neumaier) sum, `_sum`, instead of `sum`, and `solve!`
-  projects the constant mode out of the solution it returns, using the same sum, before each of its
-  returns. Before, the same n = 256 solve gave an error of 9.2580e-5 on Julia 1.10.12 and 1.4241e-4
+  projects the constant mode out of the solution it returns, using the same sum, just before its one
+  `return`. Before, the same n = 256 solve gave an error of 9.2580e-5 on Julia 1.10.12 and 1.4241e-4
   on 1.13.1 under `--check-bounds=yes`, against 2.15e-6 without the flag, so the same call returned
   a different `Float32` answer depending on how Julia was started. The error is now the same whether
   or not the run forces bounds checking. The `Float64` solution changes in its last bits; its n = 256

@@ -44,45 +44,25 @@ if isdefined(JET, :JET_AVAILABLE) ? JET.JET_AVAILABLE :
         (Vector{Float64}, typeof(PoissonSolverMatrixFree(grid)), Vector{Float64});
         target_modules = m)))
 
-    # test/verification/tight_solves.jl: solve! of each backend at `Float32`, and on the
-    # unit-stride view at an offset the same file solves with, at both element types. Another
-    # backend at the same element type is one of these methods; the periodic and the Dirichlet
-    # spline are separate lines because they reach different factorisations.
-    fft64 = PoissonSolverFFT(FFTWBasis((0.0, 1.0), 64))
-    fft32 = PoissonSolverFFT(FFTWBasis(Float32.((0.0, 1.0)), 64))
-    periodic64 = PoissonSolverSpline(PeriodicBasisSpline((0.0, 1.0), 5, 32))
-    periodic32 = PoissonSolverSpline(PeriodicBasisSpline(Float32.((0.0, 1.0)), 5, 32))
-    dirichlet64 = PoissonSolverSpline(DirichletBasisSpline((0.0, 1.0), 5, 32))
-    dirichlet32 = PoissonSolverSpline(DirichletBasisSpline(Float32.((0.0, 1.0)), 5, 32))
-    grid64 = PoissonSolverMatrixFree(grid)
-    grid32 = PoissonSolverMatrixFree(FiniteDifferenceBasis(Float32.((0.0, 1.0)), 64; order = 4))
-
-    view64 = typeof(view(zeros(66), 2:65))
-    view32 = typeof(view(zeros(Float32, 66), 2:65))
-    for p in (fft32, periodic32, dirichlet32, grid32)
-        @test isempty(JET.get_reports(JET.report_opt(solve!,
-            (Vector{Float32}, typeof(p), Vector{Float32}); target_modules = m)))
-    end
-    for p in (fft64, periodic64, dirichlet64, grid64)
-        @test isempty(JET.get_reports(JET.report_opt(solve!,
-            (Vector{Float64}, typeof(p), view64); target_modules = m)))
-    end
-    for p in (fft32, periodic32, dirichlet32, grid32)
-        @test isempty(JET.get_reports(JET.report_opt(solve!,
-            (Vector{Float32}, typeof(p), view32); target_modules = m)))
-    end
-
-    # The view as the *result* of a function right-hand side, which the same file's conversion
-    # probe solves into as well. The function returns the other element type, as there.
+    # test/verification/tight_solves.jl: solve! of each backend at both element types, with a
+    # vector right-hand side, with the unit-stride view at an offset that the same file solves
+    # with, and with that view as the result of a function right-hand side. The function returns
+    # the other element type, as there. The periodic and the Dirichlet spline reach different
+    # factorisations.
     other(x::Float32) = 2.0 * x
     other(x::Float64) = Float32(2.0 * x)
-    for p in (fft32, periodic32, dirichlet32, grid32)
-        @test isempty(JET.get_reports(JET.report_opt(solve!,
-            (view32, typeof(p), typeof(other)); target_modules = m)))
-    end
-    for p in (fft64, periodic64, dirichlet64, grid64)
-        @test isempty(JET.get_reports(JET.report_opt(solve!,
-            (view64, typeof(p), typeof(other)); target_modules = m)))
+    for T in (Float32, Float64)
+        domain = T.((0.0, 1.0))
+        V = typeof(view(zeros(T, 66), 2:65))
+        for p in (PoissonSolverFFT(FFTWBasis(domain, 64)),
+                PoissonSolverSpline(PeriodicBasisSpline(domain, 5, 32)),
+                PoissonSolverSpline(DirichletBasisSpline(domain, 5, 32)),
+                PoissonSolverMatrixFree(FiniteDifferenceBasis(domain, 64; order = 4))),
+            types in ((Vector{T}, typeof(p), Vector{T}), (Vector{T}, typeof(p), V),
+                (V, typeof(p), typeof(other)))
+
+            @test isempty(JET.get_reports(JET.report_opt(solve!, types; target_modules = m)))
+        end
     end
 else
     @test_skip "JET does not work on Julia $VERSION"  # aviatesk/JET.jl#681

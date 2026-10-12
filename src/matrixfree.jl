@@ -147,11 +147,6 @@ function _sum(x)
     return s + c
 end
 
-# Remove the constant mode from the returned solution. Its eigenvalue in `-Δ + R` is 1, whereas
-# the first oscillating mode is approximately `(2π / L)^2` on a domain of length `L`. Rounding
-# can leave a constant component even when the iteration meets its residual tolerance.
-_mean_free!(ϕ) = (ϕ .-= _sum(ϕ) / length(ϕ); ϕ)
-
 # y = (-Δ + R) x
 function _apply_L!(y::AbstractVector, x::AbstractVector, p::PoissonSolverMatrixFree)
     b = p.basis
@@ -172,7 +167,7 @@ function solve!(ϕ::AbstractVector, p::PoissonSolverMatrixFree, ρ::AbstractVect
     tolerance = p.reltol^2 * rr₀
 
     for _ in 1:(p.maxiter)
-        rr ≤ tolerance && return _mean_free!(ϕ)
+        rr ≤ tolerance && break
         _apply_L!(Ld, d, p)
         α = rr / dot(d, Ld)
         ϕ .+= α .* d
@@ -183,5 +178,10 @@ function solve!(ϕ::AbstractVector, p::PoissonSolverMatrixFree, ρ::AbstractVect
 
     rr ≤ tolerance || error("conjugate gradients did not reach a relative residual of " *
           "$(p.reltol) in $(p.maxiter) iterations; it stopped at $(sqrt(rr / rr₀))")
-    return _mean_free!(ϕ)
+
+    # Remove the constant mode. Its eigenvalue in `-Δ + R` is 1, whereas the first oscillating
+    # mode is approximately `(2π / L)^2` on a domain of length `L`, so rounding can leave a
+    # constant component even when the iteration meets its residual tolerance.
+    ϕ .-= _sum(ϕ) / length(ϕ)
+    return ϕ
 end
