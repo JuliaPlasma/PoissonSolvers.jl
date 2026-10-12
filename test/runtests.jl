@@ -8,5 +8,6 @@ if "core" in GROUPS
     @safetestset "FFT Solvers" include("poisson_fft.jl")
     @safetestset "Spline Solvers" include("poisson_spline.jl")
     @safetestset "Matrix-Free Solvers" include("matrixfree.jl")
+    @safetestset "Tight Float32 solves" include("verification/tight_solves.jl")
     @safetestset "Potential" include("potential.jl")
 end

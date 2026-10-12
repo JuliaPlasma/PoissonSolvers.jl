@@ -12,15 +12,16 @@
 - **kind:** upstream
 - **found:** 2026-09-14
 
-### K2 · A periodic spline solver cannot be built at `Float32`.
+### K2 · A `Float32` periodic spline is rejected at a fine resolution.
 
 - **location:** —
-- **evidence:** `SimpleSplines.CirculantMass` checks
-  that the assembled mass matrix is circulant against an absolute tolerance of `1e-10`, which
-  `Float32` assembly noise exceeds, so construction fails with `ArgumentError: the mass matrix is
-  not circulant to within 1.0e-10` before this package sees the matrix. The tolerance needs to
-  scale with `eps(eltype)` upstream. The `Float32` Dirichlet spline and `Float32` grid solvers both
-  work.
+- **evidence:** `SimpleSplines`' `_reciprocal_eigenvalues` treats an eigenvalue below
+  `n * eps(T) * maximum(abs, ĉ)` as zero, which is `pinv`'s own relative cutoff, and the smallest
+  nonzero eigenvalue of a periodic stiffness matrix falls under it at a fine resolution. A
+  `PeriodicBasisSpline` at `Float32` builds at n = 256 for orders 2 to 5, and fails with
+  `ArgumentError: the matrix is singular beyond the constants: a second mode of the transform
+  vanishes as well` at n = 512 at order 2 and at n = 1024 at order 4. The `Float32` Dirichlet
+  spline and the `Float32` grid solvers build at n = 256, 512 and 1024. The fix is upstream.
 - **kind:** upstream
 - **found:** 2026-09-14
 
@@ -35,3 +36,15 @@
   blocks are not test failures, and the test totals do not change.
 - **kind:** upstream
 - **found:** 2026-10-01
+
+### K4 · A constant right-hand side near `floatmax` solves to `NaN`, not to zero.
+
+- **location:** `src/poisson_fft.jl:131`
+- **evidence:** `solve(PoissonSolver(FFTWBasis(T.((0, 1)), 64)), x -> floatmax(T) / 2)` returns a
+  vector that is not all finite, in `Float32` and in `Float64`. A constant is in the kernel of the
+  periodic operator and the k = 0 factor is zero instead of `1/k²`, so the mean-free solution is
+  zero; the transform's range instead overflows the DC mode and `Inf * 0` reaches the result. The
+  input is outside the density and scale domain of `test/verification/tight_solves.jl` (`1`, `3e-8`,
+  `3e8`).
+- **kind:** found late
+- **found:** 2026-10-11; reproduced on base commit `6146203` as well as this branch.

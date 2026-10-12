@@ -1,5 +1,5 @@
 using PoissonSolvers
-using PoissonSolvers: _apply_L!, _apply_Δₓ!, _apply_Δₓ₄!, _apply_Rₓ!
+using PoissonSolvers: _apply_L!, _apply_Δₓ!, _apply_Δₓ₄!, _apply_Rₓ!, _sum
 using LinearAlgebra
 using Random
 using Test
@@ -82,6 +82,11 @@ end
     # `reltol` bounds the residual, not the error, so this checks the error against the analytic
     # solution. exp(sin(2πx)) has every Fourier mode, so conjugate gradients cannot finish in a few
     # steps on a few eigenvectors, and the solver returns its mean-free part.
+    #
+    # The bound is 1.7 times the measured `Float32` floor of this grid, n = 256 at order 4, which is
+    # 2.5858e-6 on Julia 1.10.12 and 1.6735e-6 on 1.13.1, and above the `Float64` truncation error
+    # `C h^4` of 2.1e-8 on the same grid. Compensated summation and the mean-free projection keep it
+    # valid with bounds checking either enabled or disabled, so the bound needs no guard.
     potential(x) = exp(sin(2π * x))
     density(x) = 4π^2 * exp(sin(2π * x)) * (sin(2π * x) - cos(2π * x)^2)
     b = FiniteDifferenceBasis(Float32.((0.0, 1.0)), 256; order = 4)
@@ -90,7 +95,7 @@ end
     φ = solve(PoissonSolver(b), Float32.(density.(x)))
 
     @test eltype(φ) == Float32
-    @test norm(φ .- reference) / norm(reference) ≤ 1e-3
+    @test norm(φ .- reference) / norm(reference) ≤ 4.4e-6
 end
 
 @testset "the same periodic problem as the FFT backend" begin
@@ -170,6 +175,19 @@ end
             @test bytes == 0
         end
     end
+end
+
+@testset "the compensated sum" begin
+    # The projection of the mean-free solution is only as good as the sum it uses: `sum` reaches
+    # Base's `@simd` loop, whose `@inbounds` a run that forces `--check-bounds=yes` ignores, so the
+    # summation order — and with it the `Float32` accuracy of the solve — moves with the run.
+    # Neumaier keeps the 254 ones the 1e8 swallows, in either mode, from a vector and from a view.
+    x = [1.0f8; fill(1.0f0, 254); -1.0f8]
+    @test _sum(x) == 254
+
+    wider = zeros(Float32, length(x) + 2)
+    wider[2:(end - 1)] .= x
+    @test _sum(view(wider, 2:(length(x) + 1))) == 254
 end
 
 @testset "the function path reduces to the sampled vector path" begin

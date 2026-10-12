@@ -109,7 +109,9 @@ function loadvector(p::PoissonSolverSpline, f)
     basis_values(q, 0) * (quadrature_weights(q) .* f.(quadrature_nodes(q)))
 end
 
-discretise(p::PoissonSolverSpline, f) = loadvector(p, f)
+# Convert each sample to the solver's element type. Capturing the type parameter `DT` keeps
+# the conversion closure inferable when `loadvector` specialises on it.
+discretise(p::PoissonSolverSpline{DT}, f) where {DT} = loadvector(p, x -> DT(f(x)))
 
 function solve!(result::AbstractVector, p::PoissonSolverSpline, rhs::AbstractVector)
     checklengths(result, p, rhs)

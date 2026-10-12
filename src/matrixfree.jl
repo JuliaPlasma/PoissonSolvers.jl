@@ -131,14 +131,27 @@ basis(p::PoissonSolverMatrixFree) = p.basis
 Base.length(p::PoissonSolverMatrixFree) = length(p.basis)
 
 function discretise(p::Union{PoissonSolverFFT, PoissonSolverMatrixFree}, f)
-    f.(p.basis.xgrid[1:(end - 1)])
+    eltype(p)[f(x) for x in p.basis.xgrid[1:(end - 1)]]
+end
+
+# Neumaier summation for the right-hand side, operator and solution projections. A sequential
+# compensated reduction keeps their `Float32` accuracy independent of bounds-checking mode.
+function _sum(x)
+    s = zero(eltype(x))
+    c = zero(s)
+    @inbounds for v in x
+        t = s + v
+        c += abs(s) ≥ abs(v) ? (s - t) + v : (v - t) + s
+        s = t
+    end
+    return s + c
 end
 
 # y = (-Δ + R) x
 function _apply_L!(y::AbstractVector, x::AbstractVector, p::PoissonSolverMatrixFree)
     b = p.basis
     b.order == 2 ? _apply_Δₓ!(y, x, b.Δx) : _apply_Δₓ₄!(y, x, b.Δx)
-    y .= sum(x) / length(x) .- y
+    y .= _sum(x) / length(x) .- y
     return y
 end
 
@@ -147,14 +160,14 @@ function solve!(ϕ::AbstractVector, p::PoissonSolverMatrixFree, ρ::AbstractVect
     r, d, Ld = p.r, p.d, p.Ld
 
     # r = (1 - R) ρ is the residual of the initial guess ϕ = 0.
-    r .= ρ .- sum(ρ) / length(ρ)
+    r .= ρ .- _sum(ρ) / length(ρ)
     ϕ .= 0
     d .= r
     rr = rr₀ = dot(r, r)
     tolerance = p.reltol^2 * rr₀
 
     for _ in 1:(p.maxiter)
-        rr ≤ tolerance && return ϕ
+        rr ≤ tolerance && break
         _apply_L!(Ld, d, p)
         α = rr / dot(d, Ld)
         ϕ .+= α .* d
@@ -165,5 +178,10 @@ function solve!(ϕ::AbstractVector, p::PoissonSolverMatrixFree, ρ::AbstractVect
 
     rr ≤ tolerance || error("conjugate gradients did not reach a relative residual of " *
           "$(p.reltol) in $(p.maxiter) iterations; it stopped at $(sqrt(rr / rr₀))")
+
+    # Remove the constant mode. Its eigenvalue in `-Δ + R` is 1, whereas the first oscillating
+    # mode is approximately `(2π / L)^2` on a domain of length `L`, so rounding can leave a
+    # constant component even when the iteration meets its residual tolerance.
+    ϕ .-= _sum(ϕ) / length(ϕ)
     return ϕ
 end

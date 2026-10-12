@@ -7,10 +7,12 @@ using Test
 # dispatch on one of these paths is what the allocation tests measure only indirectly.
 #
 # Each further element type that a test outside `test/quality/` passes directly to the same
-# method gets one line too: `Float32` for the `Potential` functor (test/potential.jl). An element
-# type that reaches a method only through another function gets none: the `Float32` solves of
-# `solve` (test/matrixfree.jl) and of the `Potential` constructor (test/potential.jl) reach
-# `solve!` that way.
+# method gets one line too, and so does each view at an offset it solves with: `Float32` for the
+# `Potential` functor (test/potential.jl), and `Float32` and the unit-stride view for `solve!`
+# (test/verification/tight_solves.jl). Another backend or another basis at the same element type
+# needs no line. An element type that reaches a method only through another function gets none:
+# the `Float32` solves of `solve` (test/matrixfree.jl) and of the `Potential` constructor
+# (test/potential.jl) reach `solve!` that way.
 
 if isdefined(JET, :JET_AVAILABLE) ? JET.JET_AVAILABLE :
    (isdefined(JET, :JET_LOADABLE) ? JET.JET_LOADABLE : true)
@@ -41,6 +43,27 @@ if isdefined(JET, :JET_AVAILABLE) ? JET.JET_AVAILABLE :
     @test isempty(JET.get_reports(JET.report_opt(solve!,
         (Vector{Float64}, typeof(PoissonSolverMatrixFree(grid)), Vector{Float64});
         target_modules = m)))
+
+    # test/verification/tight_solves.jl: solve! of each backend at both element types, with a
+    # vector right-hand side, with the unit-stride view at an offset that the same file solves
+    # with, and with that view as the result of a function right-hand side. The function returns
+    # the other element type, as there. The periodic and the Dirichlet spline reach different
+    # factorisations.
+    other(x::Float32) = 2.0 * x
+    other(x::Float64) = Float32(2.0 * x)
+    for T in (Float32, Float64)
+        domain = T.((0.0, 1.0))
+        V = typeof(view(zeros(T, 66), 2:65))
+        for p in (PoissonSolverFFT(FFTWBasis(domain, 64)),
+                PoissonSolverSpline(PeriodicBasisSpline(domain, 5, 32)),
+                PoissonSolverSpline(DirichletBasisSpline(domain, 5, 32)),
+                PoissonSolverMatrixFree(FiniteDifferenceBasis(domain, 64; order = 4))),
+            types in ((Vector{T}, typeof(p), Vector{T}), (Vector{T}, typeof(p), V),
+                (V, typeof(p), typeof(other)))
+
+            @test isempty(JET.get_reports(JET.report_opt(solve!, types; target_modules = m)))
+        end
+    end
 else
     @test_skip "JET does not work on Julia $VERSION"  # aviatesk/JET.jl#681
 end
