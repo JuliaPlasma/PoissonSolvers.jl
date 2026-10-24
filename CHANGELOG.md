@@ -16,6 +16,11 @@ makes it worth keeping. The record proper begins with the section below.
 
 ### Changed
 
+- **Julia 1.12 is the floor** (`[compat] julia = "1.12"`, from 1.10). A breaking change under
+  this package's pre-1.0 convention: a caller on Julia 1.10 or 1.11 can no longer install this
+  version. No code in `src/` or `test/` branched on the Julia version, so no workaround is
+  deleted. The `Float32` accuracy bound in `test/matrixfree.jl` is re-measured on 1.12.7 and
+  stays at `4.4e-6`; its entry below gives the figures.
 - CI uploads coverage from the `Julia 1 - ubuntu-latest` job instead of `Julia min`, and a test
   job saves the Julia cache only when it succeeds.
 - The test suite follows the layout of the other JuliaGNI packages. `test/runtests.jl` holds one
@@ -37,9 +42,9 @@ makes it worth keeping. The record proper begins with the section below.
   is the first version that accepts AbstractFFTs 1. The upper bound is unchanged, so this changes
   nothing for an install that resolved before.
 - The one `Float32` accuracy bound in `test/matrixfree.jl` is `4.4e-6`, tightened from `1e-3`:
-  1.7 times the larger of the two measured `Float32` errors of that grid (n = 256, fourth order),
-  which are 2.5858e-6 on Julia 1.10.12 and 1.6735e-6 on 1.13.1. It is above the `Float64`
-  truncation error on the same grid (2.1e-8).
+  2.6 times the measured `Float32` error of that grid (n = 256, fourth order), which is 1.6735e-6
+  on Julia 1.12.7 on `aarch64`. It is above the `Float64` truncation error on the same grid
+  (2.1e-8).
 - `test/verification/tight_solves.jl` is new and runs in the `core` group. Unlike the files above, it
   mirrors no source file. It bounds the normwise backward error of the discrete equation,
   `‖b − Aφ‖∞ / (‖A‖∞‖φ‖∞ + ‖b‖∞)`, evaluated in `widen(T)`, by `16·eps(T)`. It covers the FFT,

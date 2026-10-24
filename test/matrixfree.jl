@@ -83,10 +83,11 @@ end
     # solution. exp(sin(2πx)) has every Fourier mode, so conjugate gradients cannot finish in a few
     # steps on a few eigenvectors, and the solver returns its mean-free part.
     #
-    # The bound is 1.7 times the measured `Float32` floor of this grid, n = 256 at order 4, which is
-    # 2.5858e-6 on Julia 1.10.12 and 1.6735e-6 on 1.13.1, and above the `Float64` truncation error
-    # `C h^4` of 2.1e-8 on the same grid. Compensated summation and the mean-free projection keep it
-    # valid with bounds checking either enabled or disabled, so the bound needs no guard.
+    # The measured `Float32` error of this grid, n = 256 at order 4, is 1.6735e-6 on Julia 1.12.7 on
+    # `aarch64`, with bounds checking enabled and disabled alike. The bound 4.4e-6 is 2.6 times that,
+    # and is above the `Float64` truncation error `C h^4` of 2.1e-8 on the same grid. `x86_64` is
+    # not measured here. Compensated summation and the mean-free projection keep it valid with
+    # bounds checking either enabled or disabled, so the bound needs no guard.
     potential(x) = exp(sin(2π * x))
     density(x) = 4π^2 * exp(sin(2π * x)) * (sin(2π * x) - cos(2π * x)^2)
     b = FiniteDifferenceBasis(Float32.((0.0, 1.0)), 256; order = 4)
