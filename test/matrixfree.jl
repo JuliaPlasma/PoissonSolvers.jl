@@ -85,10 +85,9 @@ end
     #
     # The measured `Float32` error of this grid, n = 256 at order 4, is 1.6735e-6 on Julia 1.12.7 on
     # `aarch64`, with bounds checking enabled and disabled alike. The bound 4.4e-6 is 2.6 times that,
-    # and is above the `Float64` truncation error `C h^4` of 2.1e-8 on the same grid; the margin
-    # covers `x86_64`, which is not measured here. Compensated summation and the mean-free
-    # projection keep it valid with bounds checking either enabled or disabled, so the bound needs
-    # no guard.
+    # and is above the `Float64` truncation error `C h^4` of 2.1e-8 on the same grid. `x86_64` is
+    # not measured here. Compensated summation and the mean-free projection keep it valid with
+    # bounds checking either enabled or disabled, so the bound needs no guard.
     potential(x) = exp(sin(2π * x))
     density(x) = 4π^2 * exp(sin(2π * x)) * (sin(2π * x) - cos(2π * x)^2)
     b = FiniteDifferenceBasis(Float32.((0.0, 1.0)), 256; order = 4)
