@@ -109,9 +109,17 @@ struct PoissonSolverFFT{DT, BT <: FFTWBasis{DT}, PT, IT} <: PoissonSolver{DT}
         # in particular, whose alignment an aligned plan rejects at run time. ESTIMATE has to be
         # given alongside it: UNALIGNED alone replaces the flags rather than adding to them, and
         # FFTW's default rigor then measures, which overwrites the array being planned for.
+        #
+        # The forward plan is FFTW's method, called by `invoke`. Another package that defines
+        # `plan_rfft(::AbstractArray{<:Real}, ::RegionTypes)`, as FFTA does from 0.3.2, makes the
+        # plain call ambiguous whenever both are loaded. The inverse comes from the plan itself,
+        # through FFTW's `plan_inv`, so it never reaches the generic `plan_brfft` that the same
+        # package makes ambiguous; it keeps the flags and adds PRESERVE_INPUT, as FFTW's own
+        # `plan_irfft` does.
         flags = FFTW.ESTIMATE | FFTW.UNALIGNED
-        plan = plan_rfft(Vector{DT}(undef, n); flags)
-        iplan = plan_irfft(similar(ρ̂), n; flags)
+        plan = invoke(plan_rfft, Tuple{StridedArray{DT}, Any}, Vector{DT}(undef, n), (1,);
+            flags)
+        iplan = inv(plan)
 
         # -φ'' = ρ is k² φ̂ = ρ̂ with k = 2πm/L. The m = 0 mode is the constant, which the
         # equation does not determine at all; a zero factor there picks the mean-free solution

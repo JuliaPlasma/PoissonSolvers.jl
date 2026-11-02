@@ -15,3 +15,6 @@ end
 @safetestset "Potential                                                                       " begin
     include("potential_tests.jl")
 end
+@safetestset "FFT Solvers beside FFTA                                                         " begin
+    include("ffta_tests.jl")
+end

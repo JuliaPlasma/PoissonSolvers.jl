@@ -12,6 +12,22 @@ the tags. That gap is deliberate, and is named rather than
 reconstructed, because a changelog assembled after the fact loses exactly the reasoning that
 makes it worth keeping. The record proper begins with the section below.
 
+## [0.6.1] — 2026-11-02
+
+A patch release of 0.6.0 with one fix, released from the branch `release-0.6`. The changes that
+`main` has made since 0.6.0, the Julia 1.12 floor among them, are not in it.
+
+### Bug Fixes
+
+- **`PoissonSolverFFT` builds beside FFTA.** It raised `MethodError: … plan_rfft … is ambiguous`
+  whenever FFTA 0.3.2 or later was loaded beside FFTW, and with it `Potential` on an `FFTWBasis`.
+  FFTA comes in with Makie, so every environment that plots with CairoMakie hit it. FFTA adds
+  `plan_rfft` and `plan_brfft` methods for any real or complex array that are neither more nor
+  less specific than FFTW's. The solver now calls FFTW's `plan_rfft` method by `invoke`, and takes
+  the inverse plan from the forward one with `inv`, which FFTW implements for its own plans. The
+  plans have the same flags as before. A periodic spline solver still fails beside FFTA with
+  SimpleSplines 0.3.4; the fix for that is in SimpleSplines.
+
 ## [0.6.0] — 2026-09-23
 
 ### Breaking Changes
