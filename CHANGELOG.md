@@ -12,6 +12,17 @@ the tags. That gap is deliberate, and is named rather than
 reconstructed, because a changelog assembled after the fact loses exactly the reasoning that
 makes it worth keeping. The record proper begins with the section below.
 
+## [0.6.2] — 2026-11-02
+
+A compat release of 0.6.1, released from the branch `release-0.6`.
+
+### Changed
+
+- **SimpleSplines 0.4 is supported alongside 0.2 and 0.3.** Compat only:
+  `SimpleSplines = "0.2, 0.3, 0.4"`. No name or method of PoissonSolvers changes. The breaking
+  changes of SimpleSplines 0.4 reach a caller only through the `Spline` that a solution is: a
+  `Float64` solution evaluated at a `Float32` point returns a `Float32` there.
+
 ## [0.6.1] — 2026-11-02
 
 A patch release of 0.6.0 with one fix, released from the branch `release-0.6`. The changes that
