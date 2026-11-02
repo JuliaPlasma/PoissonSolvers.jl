@@ -39,7 +39,7 @@
 
 ### K4 · A constant right-hand side near `floatmax` solves to `NaN`, not to zero.
 
-- **location:** `src/poisson_fft.jl:131`
+- **location:** `src/poisson_fft.jl:139`
 - **evidence:** `solve(PoissonSolver(FFTWBasis(T.((0, 1)), 64)), x -> floatmax(T) / 2)` returns a
   vector that is not all finite, in `Float32` and in `Float64`. A constant is in the kernel of the
   periodic operator and the k = 0 factor is zero instead of `1/k²`, so the mean-free solution is
@@ -48,3 +48,16 @@
   `3e8`).
 - **kind:** found late
 - **found:** 2026-10-11; reproduced on base commit `6146203` as well as this branch.
+
+### K5 · A periodic spline solver does not build beside FFTA 0.3.2.
+
+- **location:** —
+- **evidence:** `PeriodicBasisSpline` builds its mass operator through SimpleSplines'
+  `CirculantMass`, which calls `plan_rfft(c; flags)`. FFTA 0.3.2 adds a `plan_rfft` method that is
+  ambiguous with FFTW 1.10's, so with FFTA loaded, as CairoMakie loads it, the build raises
+  `MethodError: … plan_rfft … is ambiguous` with SimpleSplines 0.3.4. The FFT solver has the same
+  call and builds beside FFTA; `test/integration/ffta.jl` checks that and runs last in `core`, so
+  that the spline tests do not run beside FFTA. The fix is upstream, in JuliaDEC/SimpleSplines.jl
+  PR #43.
+- **kind:** upstream
+- **found:** 2026-11-02
