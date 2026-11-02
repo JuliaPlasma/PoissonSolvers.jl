@@ -16,6 +16,10 @@ makes it worth keeping. The record proper begins with the section below.
 
 ### Changed
 
+- **SimpleSplines 0.4 is supported alongside 0.2 and 0.3.** Compat only:
+  `SimpleSplines = "0.2, 0.3, 0.4"`, as in 0.6.2. No name or method of PoissonSolvers changes. The
+  breaking changes of SimpleSplines 0.4 reach a caller only through the `Spline` that a solution
+  is: a `Float64` solution evaluated at a `Float32` point returns a `Float32` there.
 - **Julia 1.12 is the floor** (`[compat] julia = "1.12"`, from 1.10). A breaking change under
   this package's pre-1.0 convention: a caller on Julia 1.10 or 1.11 can no longer install this
   version. No code in `src/` or `test/` branched on the Julia version, so no workaround is
