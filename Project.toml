@@ -1,6 +1,6 @@
 name = "PoissonSolvers"
 uuid = "8f9e8900-be71-40de-a258-603fdc860a2d"
-version = "0.6.1"
+version = "0.6.2"
 authors = ["Michael Kraus"]
 
 [deps]
@@ -14,7 +14,7 @@ FFTA = "0.3.2"
 FFTW = "1"
 LinearAlgebra = "1"
 SafeTestsets = "0.1"
-SimpleSplines = "0.2, 0.3"
+SimpleSplines = "0.2, 0.3, 0.4"
 Test = "1"
 julia = "1.10"
 
