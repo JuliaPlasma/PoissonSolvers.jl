@@ -1,5 +1,6 @@
 [deps]
 Aqua = "4c88cf16-eb10-579e-8560-4a9242c79595"
+FFTA = "b86e33f2-c0db-4aa1-a6e0-ab43e668529e"
 JET = "c3a54625-cd67-489e-a8e7-0a5a0ff4e31b"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 PoissonSolvers = "8f9e8900-be71-40de-a258-603fdc860a2d"
@@ -10,6 +11,7 @@ Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [compat]
 Aqua = "0.8.14"
+FFTA = "0.3.2"
 JET = "0.10, 0.11, 0.12, 0.13"
 SafeTestsets = "0.1"
 Test = "1"

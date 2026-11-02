@@ -66,6 +66,15 @@ makes it worth keeping. The record proper begins with the section below.
 
 ### Bug Fixes
 
+- **`PoissonSolverFFT` builds beside FFTA.** It raised `MethodError: … plan_rfft … is ambiguous`
+  whenever FFTA 0.3.2 or later was loaded beside FFTW, and with it `Potential` on an `FFTWBasis`.
+  FFTA comes in with Makie, so every environment that plots with CairoMakie hit it. FFTA adds
+  `plan_rfft` and `plan_brfft` methods for any real or complex array that are neither more nor
+  less specific than FFTW's. The solver now calls FFTW's `plan_rfft` method by `invoke`, and takes
+  the inverse plan from the forward one with `inv`, which FFTW implements for its own plans. The
+  plans have the same flags as before. A new test, `test/integration/ffta.jl`, loads FFTA and
+  runs last in `core`, so that no other file runs beside it.
+
 - **`solve!` checks its lengths on every backend.** A wrong-length right-hand side or result throws
   the same `DimensionMismatch` everywhere, naming the solver's length and the two it was given.
   The FFT backend let FFTW raise a wrong-plan `ArgumentError`; the spline and matrix-free backends

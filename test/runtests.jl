@@ -10,4 +10,5 @@ if "core" in GROUPS
     @safetestset "Matrix-Free Solvers" include("matrixfree.jl")
     @safetestset "Tight Float32 solves" include("verification/tight_solves.jl")
     @safetestset "Potential" include("potential.jl")
+    @safetestset "FFT Solvers beside FFTA" include("integration/ffta.jl")
 end
