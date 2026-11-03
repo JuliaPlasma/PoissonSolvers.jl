@@ -5,9 +5,8 @@
 #
 #     julia --startup-file=no --check-bounds=auto --project=. scripts/measure_allocations.jl
 #
-# `--check-bounds=auto` matters. `Pkg.test()` forces `--check-bounds=yes` up to Julia 1.12, which
-# inflates every figure here, and is why the suite's own allocation assertions are guarded on
-# `Base.JLOptions().check_bounds == 0` rather than made unconditionally.
+# The figures are the same under `--check-bounds=yes`, which CI forces, on Julia 1.13.3, and the
+# suite's own allocation assertions are skipped only under coverage instrumentation.
 #
 # The claim this establishes: every solve is allocation-free, and so is evaluating a grid
 # solution. Evaluating a *spline* is not, and the residue is not this package's — it is the one

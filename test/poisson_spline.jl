@@ -95,27 +95,27 @@ end
     end
 end
 
+# The reading is taken through a barrier whose arguments have concrete types, after a warm call,
+# so that it measures the call itself rather than its compilation or a dynamic dispatch around it.
+allocations(f::F, a::A, b::B, c::C) where {F, A, B, C} = (f(a, b, c); @allocated f(a, b, c))
+
 @testset "type stability and allocations" begin
-    function probe(mkbasis)
+    # The docstring promises an allocation-free `solve!` on both backends, so both are measured.
+    # The two reach different factorisations, and only the periodic one carries scratch.
+    for mkbasis in (PeriodicBasisSpline, DirichletBasisSpline)
         basis = mkbasis((0.0, 1.0), 5, 32)
         solver = PoissonSolverSpline(basis)
         ρ = rand(length(solver))
         φ = similar(ρ)
-        solve!(φ, solver, ρ)
-        (@inferred(solve!(φ, solver, ρ)), @allocated(solve!(φ, solver, ρ)))
-    end
+        @test @inferred(solve!(φ, solver, ρ)) isa Vector{Float64}
 
-    # The docstring promises an allocation-free `solve!` on both backends, so both are measured.
-    # The two reach different factorisations, and only the periodic one carries scratch.
-    for mkbasis in (PeriodicBasisSpline, DirichletBasisSpline)
-        result, allocated = probe(mkbasis)
-        @test result isa Vector{Float64}
-
-        # `Pkg.test()` forces --check-bounds=yes up to Julia 1.12, which inflates allocations; the
-        # assertion is therefore made only where bounds checking is at its default.
-        if Base.JLOptions().check_bounds == 0
-            @test allocated == 0
+        # Skipped where a run instruments coverage.
+        if Base.JLOptions().code_coverage == 0
+            @test allocations(solve!, φ, solver, ρ) == 0
         end
+
+        # The control: the barrier sees an allocation where there is one.
+        @test allocations((φ, solver, ρ) -> similar(ρ), φ, solver, ρ) > 0
     end
 end
 

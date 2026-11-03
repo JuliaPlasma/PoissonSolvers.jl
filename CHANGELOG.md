@@ -36,6 +36,10 @@ makes it worth keeping. The record proper begins with the section below.
   are listed there too, with no `[compat]` entry: both are dependencies of the package, and
   `Project.toml` bounds them. Random is a new test dependency: the three test files that draw
   random numbers seed the RNG.
+- `test/quality/jet.jl` runs JET's `report_opt` on `solve!` of the FFT, spline and matrix-free
+  solvers, and on the `Potential` functor at `Float64` and `Float32`. It is in the `core` group,
+  after the Aqua checks, and runs only where JET works on the running Julia. JET is a new test
+  dependency, with no bound.
 - `test/quality/jet.jl` runs JET's `report_opt` on the functions that the tests assert with
   `@allocated`: `solve!` of the FFT, spline and matrix-free solvers, and the `Potential` functor
   at `Float64` and `Float32`. It is in the `core` group, after the Aqua checks, and runs only
@@ -67,6 +71,17 @@ makes it worth keeping. The record proper begins with the section below.
 - The `Float32` periodic spline known issue, K2 in `KNOWN_ISSUES.md`, is narrowed: a `Float32`
   periodic spline builds at n = 256 for orders 2 to 5, and is still rejected at n = 512 (order 2)
   and n = 1024 (order 4). K2 stays in the file, as an upstream issue.
+- More methods of `Potential` and of the grid solution are asserted allocation-free and
+  type-stable, in `Float32` and `Float64`: `update!(p, rhs)` with a right-hand side vector on an
+  `FFTWBasis`, a `FiniteDifferenceBasis`, and a periodic and a Dirichlet spline basis; `p(x, 1)`
+  and `derivative(p, 1)(x)` on an `FFTWBasis`; an `FFTWDerivative` at a point; and `p(x)` on a
+  `FiniteDifferenceBasis`. On a spline basis, `p(x)`, `p(x, 1)` and `derivative(p, 1)(x)` are
+  asserted type-stable only: the SimpleSplines `Spline` they evaluate allocates per call (K1).
+  Each assertion of zero bytes, those of `solve!` and of `p(x)` on an `FFTWBasis` at `Float64`
+  included, reads through a function barrier after a warm call, beside a control that shows the
+  barrier sees an allocation. Each is skipped under coverage instrumentation only, so CI, which
+  forces `--check-bounds=yes`, runs it: every asserted call reads 0 bytes with and without that
+  flag on Julia 1.12.7 and 1.13.3. No source file changes.
 
 ### Bug Fixes
 
