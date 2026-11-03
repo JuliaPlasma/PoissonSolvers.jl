@@ -68,8 +68,9 @@ makes it worth keeping. The record proper begins with the section below.
   asserted type-stable only: the SimpleSplines `Spline` they evaluate allocates per call (K1).
   Each assertion of zero bytes, those of `solve!` and of `p(x)` on an `FFTWBasis` at `Float64`
   included, reads through a function barrier after a warm call, beside a control that shows the
-  barrier sees an allocation. Each is skipped where a run forces `--check-bounds=yes` and under
-  coverage instrumentation. No source file changes.
+  barrier sees an allocation. Each is skipped under coverage instrumentation only, so CI, which
+  forces `--check-bounds=yes`, runs it: every asserted call reads 0 bytes with and without that
+  flag on Julia 1.12.7 and 1.13.3. No source file changes.
 
 ### Bug Fixes
 

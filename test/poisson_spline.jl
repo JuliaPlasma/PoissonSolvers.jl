@@ -109,8 +109,8 @@ allocations(f::F, a::A, b::B, c::C) where {F, A, B, C} = (f(a, b, c); @allocated
         φ = similar(ρ)
         @test @inferred(solve!(φ, solver, ρ)) isa Vector{Float64}
 
-        # Skipped where a run forces --check-bounds=yes or instruments coverage.
-        if Base.JLOptions().check_bounds == 0 && Base.JLOptions().code_coverage == 0
+        # Skipped where a run instruments coverage.
+        if Base.JLOptions().code_coverage == 0
             @test allocations(solve!, φ, solver, ρ) == 0
         end
 

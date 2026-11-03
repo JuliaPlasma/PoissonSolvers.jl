@@ -86,8 +86,8 @@ allocations(f::F, a::A, b::B) where {F, A, B} = (f(a, b); @allocated f(a, b))
 # `derivative(p, 1)(x)` as one call, so that `@inferred` sees the type that `derivative` returns.
 derivative_at(p, x) = derivative(p, 1)(x)
 
-# Skipped where a run forces --check-bounds=yes or instruments coverage.
-measured() = Base.JLOptions().check_bounds == 0 && Base.JLOptions().code_coverage == 0
+# Skipped where a run instruments coverage.
+measured() = Base.JLOptions().code_coverage == 0
 
 @testset "update! is inferred and allocates nothing, $T" for T in (Float64, Float32)
     domain = T.((0.0, 1.0))

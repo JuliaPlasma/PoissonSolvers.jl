@@ -86,8 +86,8 @@ allocations(f::F, a::A, b::B, c::C) where {F, A, B, C} = (f(a, b, c); @allocated
     @test @inferred(solve!(φ, solver, ρ)) isa Vector{Float64}
     @test @inferred(potential(0.3)) isa Float64
 
-    # Skipped where a run forces --check-bounds=yes or instruments coverage.
-    if Base.JLOptions().check_bounds == 0 && Base.JLOptions().code_coverage == 0
+    # Skipped where a run instruments coverage.
+    if Base.JLOptions().code_coverage == 0
         @test allocations(solve!, φ, solver, ρ) == 0
         @test allocations(potential, 0.3) == 0
     end
@@ -103,7 +103,7 @@ end
     x = T(0.3)
     @test @inferred(ds(x)) isa T
 
-    if Base.JLOptions().check_bounds == 0 && Base.JLOptions().code_coverage == 0
+    if Base.JLOptions().code_coverage == 0
         @test allocations(ds, x) == 0
     end
     @test allocations(x -> similar(basis.xgrid), x) > 0
