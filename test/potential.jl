@@ -1,5 +1,5 @@
 using PoissonSolvers
-using PoissonSolvers: ndofs, rhs, update!
+using PoissonSolvers: discretise, ndofs, rhs, update!
 using SimpleSplines
 using Test
 
@@ -75,5 +75,64 @@ end
         @test eltype(rhs(potential)) == Float32
         @test eltype(coefficients(potential)) == Float32
         @test potential(0.3f0) == 0
+    end
+end
+
+# The reading is taken through a barrier whose arguments have concrete types, after a warm call,
+# so that it measures the call itself rather than its compilation or a dynamic dispatch around it.
+allocations(f::F, a::A) where {F, A} = (f(a); @allocated f(a))
+allocations(f::F, a::A, b::B) where {F, A, B} = (f(a, b); @allocated f(a, b))
+
+# `derivative(p, 1)(x)` as one call, so that `@inferred` sees the type that `derivative` returns.
+derivative_at(p, x) = derivative(p, 1)(x)
+
+# Skipped where a run forces --check-bounds=yes or instruments coverage.
+measured() = Base.JLOptions().check_bounds == 0 && Base.JLOptions().code_coverage == 0
+
+@testset "update! is inferred and allocates nothing, $T" for T in (Float64, Float32)
+    domain = T.((0.0, 1.0))
+    for b in (FFTWBasis(domain, 64), FiniteDifferenceBasis(domain, 64; order = 4),
+        PeriodicBasisSpline(domain, 5, 32), DirichletBasisSpline(domain, 5, 32))
+        potential = Potential(b)
+        ρ = discretise(potential.solver, source)
+        @test @inferred(update!(potential, ρ)) === potential
+        @test !all(iszero, coefficients(potential))
+
+        if measured()
+            @test allocations(update!, potential, ρ) == 0
+        end
+        @test allocations((p, ρ) -> similar(ρ), potential, ρ) > 0
+    end
+end
+
+@testset "a grid potential evaluates without allocating, $T" for T in (Float64, Float32)
+    domain = T.((0.0, 1.0))
+    x = T(0.3)
+    fft = Potential(FFTWBasis(domain, 64), source)
+    fd = Potential(FiniteDifferenceBasis(domain, 64; order = 4), source)
+
+    @test @inferred(fft(x, 1)) isa T
+    @test @inferred(derivative_at(fft, x)) isa T
+    @test @inferred(fd(x)) isa T
+
+    if measured()
+        @test allocations(fft, x, 1) == 0
+        @test allocations(derivative_at, fft, x) == 0
+        @test allocations(fd, x) == 0
+    end
+    @test allocations((p, x) -> similar(coefficients(p)), fft, x) > 0
+    @test allocations(x -> similar(coefficients(fd)), x) > 0
+end
+
+@testset "a spline potential evaluates with an inferred type, $T" for T in (Float64, Float32)
+    # A spline solution is a SimpleSplines `Spline`, whose point evaluation allocates a buffer per
+    # call, so only the inferred half is asserted here.
+    domain = T.((0.0, 1.0))
+    x = T(0.3)
+    for b in (PeriodicBasisSpline(domain, 5, 32), DirichletBasisSpline(domain, 5, 32))
+        spline = Potential(b, source)
+        @test @inferred(spline(x)) isa T
+        @test @inferred(spline(x, 1)) isa T
+        @test @inferred(derivative_at(spline, x)) isa T
     end
 end

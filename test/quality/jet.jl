@@ -2,8 +2,8 @@ using JET
 using PoissonSolvers
 using Test
 
-# Static optimisation analysis of the hot paths: every function of `src/` that a test file
-# asserts with `@allocated`, at the concrete argument types those tests pass. A runtime
+# Static optimisation analysis of two hot paths that the tests assert with `@allocated`, `solve!`
+# and the `Potential` functor, at the concrete argument types those tests pass. A runtime
 # dispatch on one of these paths is what the allocation tests measure only indirectly.
 #
 # Each further element type that a test outside `test/quality/` passes directly to the same

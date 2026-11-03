@@ -72,27 +72,41 @@ end
     @test_throws ArgumentError solution(0.25, 2)
 end
 
-@testset "type stability and allocations" begin
-    function probe()
-        basis = FFTWBasis((0.0, 1.0), 64)
-        solver = PoissonSolverFFT(basis)
-        ρ = rand(length(solver))
-        φ = similar(ρ)
-        solve!(φ, solver, ρ)
-        potential = Potential(basis, ρ)
-        (@inferred(solve!(φ, solver, ρ)), @allocated(solve!(φ, solver, ρ)),
-            @inferred(potential(0.3)), @allocated(potential(0.3)))
-    end
-    result, solve_bytes, value, eval_bytes = probe()
-    @test result isa Vector{Float64}
-    @test value isa Float64
+# The reading is taken through a barrier whose arguments have concrete types, after a warm call,
+# so that it measures the call itself rather than its compilation or a dynamic dispatch around it.
+allocations(f::F, a::A) where {F, A} = (f(a); @allocated f(a))
+allocations(f::F, a::A, b::B, c::C) where {F, A, B, C} = (f(a, b, c); @allocated f(a, b, c))
 
-    # CI runs the suite with --check-bounds=yes, which inflates allocations; the assertions are
-    # therefore made only where bounds checking is at its default.
-    if Base.JLOptions().check_bounds == 0
-        @test solve_bytes == 0
-        @test eval_bytes == 0
+@testset "type stability and allocations" begin
+    basis = FFTWBasis((0.0, 1.0), 64)
+    solver = PoissonSolverFFT(basis)
+    ρ = rand(length(solver))
+    φ = similar(ρ)
+    potential = Potential(basis, ρ)
+    @test @inferred(solve!(φ, solver, ρ)) isa Vector{Float64}
+    @test @inferred(potential(0.3)) isa Float64
+
+    # Skipped where a run forces --check-bounds=yes or instruments coverage.
+    if Base.JLOptions().check_bounds == 0 && Base.JLOptions().code_coverage == 0
+        @test allocations(solve!, φ, solver, ρ) == 0
+        @test allocations(potential, 0.3) == 0
     end
+
+    # The controls: the barrier sees an allocation where there is one.
+    @test allocations((φ, solver, ρ) -> similar(ρ), φ, solver, ρ) > 0
+    @test allocations(x -> similar(ρ), 0.3) > 0
+end
+
+@testset "the derivative is inferred and allocates nothing, $T" for T in (Float64, Float32)
+    basis = FFTWBasis(T.((0.0, 1.0)), 64)
+    ds = derivative(Potential(basis, rand(T, length(basis))).potential, 1)
+    x = T(0.3)
+    @test @inferred(ds(x)) isa T
+
+    if Base.JLOptions().check_bounds == 0 && Base.JLOptions().code_coverage == 0
+        @test allocations(ds, x) == 0
+    end
+    @test allocations(x -> similar(basis.xgrid), x) > 0
 end
 
 @testset "a wrong length is a DimensionMismatch" begin
