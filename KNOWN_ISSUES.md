@@ -2,15 +2,17 @@
 
 ### K1 · Evaluating a spline potential at a scalar point allocates 96 bytes.
 
-- **location:** `scripts/measure_allocations.jl`
-- **evidence:** This is not in this
-  package: `SimpleSplines.evaluate(basis, coefficients, x)` takes one `local_width` buffer per
-  scalar call, because the degree is a struct field rather than a type parameter. The fix belongs
-  upstream: `SimpleSplines.evaluate_all!`, which takes a caller-supplied buffer, allocates nothing.
-  See `scripts/measure_allocations.jl` for both figures side by side. The grid backend evaluates
-  with no allocation.
-- **kind:** upstream
-- **found:** 2026-09-14
+- **location:** `src/potential.jl`
+- **evidence:** `p(x)`, `p(x, d)` and `derivative(p, d)(x)` on a spline basis call SimpleSplines'
+  `Spline`, whose `evaluate` takes one `local_width` buffer per scalar call: 96 B at `Float64` and
+  80 B at `Float32` with SimpleSplines 0.4.0. `scripts/measure_allocations.jl` gives the figures
+  beside those of the grid backend, which evaluates with no allocation. SimpleSplines 0.4's
+  `evaluate!` takes a caller's buffer and allocates nothing, so a buffer held by `Potential` would
+  remove the allocation. The author accepts it: point evaluation of a `Potential` serves mainly
+  plotting, and the hot paths of the callers evaluate through `evaluate_all!` with their own
+  buffer.
+- **kind:** defect
+- **found:** 2026-09-14; accepted by the author on 2026-11-03
 
 ### K2 · A `Float32` periodic spline is rejected at a fine resolution.
 
