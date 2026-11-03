@@ -39,12 +39,19 @@ makes it worth keeping. The record proper begins with the section below.
 - `test/quality/jet.jl` runs JET's `report_opt` on the functions that the tests assert with
   `@allocated`: `solve!` of the FFT, spline and matrix-free solvers, and the `Potential` functor
   at `Float64` and `Float32`. It is in the `core` group, after the Aqua checks, and runs only
-  where JET works on the running Julia. JET is a new test dependency, with no bound.
+  where JET works on the running Julia. JET is a new test dependency, bounded to
+  `JET = "0.10, 0.11, 0.12, 0.13"` in `test/Project.toml`. JET 0.10.0 is the first release
+  for Julia 1.12, and the tests pass with it at the lower bounds of every other dependency.
 - The FFTW lower bound rises from 1.0.0 to 1.3.1: `FFTW = "1.3.1"`. FFTW 1.0.0 to 1.3.0 never
   installed together with SimpleSplines. Those versions bound AbstractFFTs to 0.3–0.5, and every
   SimpleSplines version needs a ContinuumArrays release that requires AbstractFFTs 1. FFTW 1.3.1
   is the first version that accepts AbstractFFTs 1. The upper bound is unchanged, so this changes
   nothing for an install that resolved before.
+- The Aqua lower bound in `test/Project.toml` rises from 0.8.0 to 0.8.14: `Aqua = "0.8.14"`.
+  Before 0.8.14, the piracy check reads `Core.TypeName.mt` or `Core.GlobalMethods`, and Julia
+  1.12 has neither: `Aqua.test_all` stops with a `FieldError`. Aqua 0.8.14 reads
+  `Core.methodtable`. At 0.8.0, the ambiguity check also fails on Julia 1.12; at 0.8.14, all
+  11 Aqua checks pass.
 - The one `Float32` accuracy bound in `test/matrixfree.jl` is `4.4e-6`, tightened from `1e-3`:
   2.6 times the measured `Float32` error of that grid (n = 256, fourth order), which is 1.6735e-6
   on Julia 1.12.7 on `aarch64`. It is above the `Float64` truncation error on the same grid
