@@ -9,10 +9,11 @@
 # suite's own allocation assertions are skipped only under coverage instrumentation.
 #
 # The claim this establishes: every solve is allocation-free, and so is evaluating a grid
-# solution. Evaluating a *spline* is not, and the residue is not this package's — it is the one
-# `local_width` buffer `SimpleSplines.evaluate` takes per scalar call, reported here alongside so
-# that the two cannot be confused. `SimpleSplines.evaluate_all!`, which takes a caller-supplied
-# buffer, allocates nothing, so the fix is upstream rather than a scratch buffer here.
+# solution. Evaluating a *spline* is not: the allocation is the one `local_width` buffer
+# `SimpleSplines.evaluate` takes per scalar call, reported here alongside so that the two cannot be
+# confused. `SimpleSplines.evaluate_all!`, and `evaluate!` from SimpleSplines 0.4, take a
+# caller-supplied buffer and allocate nothing; `Potential` holds no such buffer, by the author's
+# decision (K1 in `KNOWN_ISSUES.md`).
 
 using PoissonSolvers
 using PoissonSolvers: update!
