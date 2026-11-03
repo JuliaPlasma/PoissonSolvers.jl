@@ -1,16 +1,16 @@
 # Known issues
 
-### K1 · Evaluating a spline potential at a scalar point allocates 96 bytes.
+### K1 · Evaluating a spline potential at a scalar point allocates one buffer per call.
 
 - **location:** `src/potential.jl`
 - **evidence:** `p(x)`, `p(x, d)` and `derivative(p, d)(x)` on a spline basis call SimpleSplines'
   `Spline`, whose `evaluate` takes one `local_width` buffer per scalar call: 96 B at `Float64` and
-  80 B at `Float32` with SimpleSplines 0.4.0. `scripts/measure_allocations.jl` gives the figures
-  beside those of the grid backend, which evaluates with no allocation. SimpleSplines 0.4's
-  `evaluate!` takes a caller's buffer and allocates nothing, so a buffer held by `Potential` would
-  remove the allocation. The author accepts it: point evaluation of a `Potential` serves mainly
-  plotting, and the hot paths of the callers evaluate through `evaluate_all!` with their own
-  buffer.
+  80 B at `Float32` at order 5 with SimpleSplines 0.4.0; the size grows with the order.
+  `scripts/measure_allocations.jl` gives the `Float64` figure beside the grid backend's, which
+  evaluates with no allocation. SimpleSplines 0.4's `evaluate!` takes a caller's buffer and
+  allocates nothing, so a buffer held by `Potential` would remove the allocation. The author
+  accepts it: point evaluation of a `Potential` serves mainly plotting, and the hot paths of the
+  callers evaluate through `evaluate_all!` with their own buffer.
 - **kind:** defect
 - **found:** 2026-09-14; accepted by the author on 2026-11-03
 
