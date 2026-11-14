@@ -12,34 +12,30 @@ the tags. That gap is deliberate, and is named rather than
 reconstructed, because a changelog assembled after the fact loses exactly the reasoning that
 makes it worth keeping. The record proper begins with the section below.
 
-## [Unreleased]
+## [0.7.0] — 2026-11-14
 
-### Changed
+### Breaking Changes
 
-- **SimpleSplines 0.4 is supported alongside 0.2 and 0.3.** Compat only:
-  `SimpleSplines = "0.2, 0.3, 0.4"`, as in 0.6.2. No name or method of PoissonSolvers changes. The
-  breaking changes of SimpleSplines 0.4 reach a caller only through the `Spline` that a solution
-  is: a `Float64` solution evaluated at a `Float32` point returns a `Float32` there.
 - **Julia 1.12 is the floor** (`[compat] julia = "1.12"`, from 1.10). A breaking change under
   this package's pre-1.0 convention: a caller on Julia 1.10 or 1.11 can no longer install this
   version. No code in `src/` or `test/` branched on the Julia version, so no workaround is
   deleted. The `Float32` accuracy bound in `test/matrixfree.jl` is re-measured on 1.12.7 and
   stays at `4.4e-6`; its entry below gives the figures.
+
+### Changed
+
 - CI uploads coverage from the `Julia 1 - ubuntu-latest` job instead of `Julia min`, and a test
   job saves the Julia cache only when it succeeds.
 - The test suite follows the layout of the other JuliaGNI packages. `test/runtests.jl` holds one
   `core` group of `@safetestset` lines. Each test file mirrors the source file it tests:
   `test/poisson_fft.jl`, `test/poisson_spline.jl`, `test/matrixfree.jl` and `test/potential.jl`.
-  The Aqua checks are in `test/quality/aqua.jl`.
+  The Aqua checks are in `test/quality/aqua.jl`. The FFTA test of 0.6.1 is
+  `test/integration/ffta.jl` and runs last in `core`, so that no other file runs beside it.
 - The test dependencies are in `test/Project.toml`. Aqua, SafeTestsets and Test move there from
   `[extras]` and `[targets]` of `Project.toml`, with their bounds. LinearAlgebra and SimpleSplines
   are listed there too, with no `[compat]` entry: both are dependencies of the package, and
   `Project.toml` bounds them. Random is a new test dependency: the three test files that draw
   random numbers seed the RNG.
-- `test/quality/jet.jl` runs JET's `report_opt` on `solve!` of the FFT, spline and matrix-free
-  solvers, and on the `Potential` functor at `Float64` and `Float32`. It is in the `core` group,
-  after the Aqua checks, and runs only where JET works on the running Julia. JET is a new test
-  dependency, with no bound.
 - `test/quality/jet.jl` runs JET's `report_opt` on the functions that the tests assert with
   `@allocated`: `solve!` of the FFT, spline and matrix-free solvers, and the `Potential` functor
   at `Float64` and `Float32`. It is in the `core` group, after the Aqua checks, and runs only
@@ -85,15 +81,6 @@ makes it worth keeping. The record proper begins with the section below.
 
 ### Bug Fixes
 
-- **`PoissonSolverFFT` builds beside FFTA.** It raised `MethodError: … plan_rfft … is ambiguous`
-  whenever FFTA 0.3.2 or later was loaded beside FFTW, and with it `Potential` on an `FFTWBasis`.
-  FFTA comes in with Makie, so every environment that plots with CairoMakie hit it. FFTA adds
-  `plan_rfft` and `plan_brfft` methods for any real or complex array that are neither more nor
-  less specific than FFTW's. The solver now calls FFTW's `plan_rfft` method by `invoke`, and takes
-  the inverse plan from the forward one with `inv`, which FFTW implements for its own plans. The
-  plans have the same flags as before. A new test, `test/integration/ffta.jl`, loads FFTA and
-  runs last in `core`, so that no other file runs beside it.
-
 - **`solve!` checks its lengths on every backend.** A wrong-length right-hand side or result throws
   the same `DimensionMismatch` everywhere, naming the solver's length and the two it was given.
   The FFT backend let FFTW raise a wrong-plan `ArgumentError`; the spline and matrix-free backends
@@ -126,6 +113,33 @@ makes it worth keeping. The record proper begins with the section below.
   a different `Float32` answer depending on how Julia was started. The error is now the same whether
   or not the run forces bounds checking. The `Float64` solution changes in its last bits; its n = 256
   error stays at 2.053e-8.
+
+## [0.6.2] — 2026-11-02
+
+A compat release of 0.6.1, released from the branch `release-0.6`.
+
+### Changed
+
+- **SimpleSplines 0.4 is supported alongside 0.2 and 0.3.** Compat only:
+  `SimpleSplines = "0.2, 0.3, 0.4"`. No name or method of PoissonSolvers changes. The breaking
+  changes of SimpleSplines 0.4 reach a caller only through the `Spline` that a solution is: a
+  `Float64` solution evaluated at a `Float32` point returns a `Float32` there.
+
+## [0.6.1] — 2026-11-02
+
+A patch release of 0.6.0 with one fix, released from the branch `release-0.6`. The changes that
+`main` has made since 0.6.0, the Julia 1.12 floor among them, are not in it.
+
+### Bug Fixes
+
+- **`PoissonSolverFFT` builds beside FFTA.** It raised `MethodError: … plan_rfft … is ambiguous`
+  whenever FFTA 0.3.2 or later was loaded beside FFTW, and with it `Potential` on an `FFTWBasis`.
+  FFTA comes in with Makie, so every environment that plots with CairoMakie hit it. FFTA adds
+  `plan_rfft` and `plan_brfft` methods for any real or complex array that are neither more nor
+  less specific than FFTW's. The solver now calls FFTW's `plan_rfft` method by `invoke`, and takes
+  the inverse plan from the forward one with `inv`, which FFTW implements for its own plans. The
+  plans have the same flags as before. A periodic spline solver still fails beside FFTA with
+  SimpleSplines 0.3.4; the fix for that is in SimpleSplines.
 
 ## [0.6.0] — 2026-09-23
 
