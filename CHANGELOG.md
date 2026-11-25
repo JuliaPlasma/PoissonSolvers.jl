@@ -22,7 +22,8 @@ makes it worth keeping. The record proper begins with the section below.
   overflowing domain length, or breakpoints that are not finite and strictly increasing. It also
   fixes the derivatives of a periodic basis at the seam for `ForwardDiff.Dual` arguments, and the
   double count just below the right end of the domain in a periodic evaluation. A periodic spline
-  solution reaches the last fix through the `Spline` it is.
+  solution reaches the `ForwardDiff.Dual` fix through the `Spline` it is. Its evaluation does not
+  reach the double count, which was in the evaluation of one basis function at a time.
 
 ## [0.7.0] — 2026-11-14
 
