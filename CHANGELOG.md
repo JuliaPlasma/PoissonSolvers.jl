@@ -12,7 +12,7 @@ the tags. That gap is deliberate, and is named rather than
 reconstructed, because a changelog assembled after the fact loses exactly the reasoning that
 makes it worth keeping. The record proper begins with the section below.
 
-## [Unreleased] — targeting 0.7.1
+## [0.7.1] — 2026-11-25
 
 ### Changed
 
