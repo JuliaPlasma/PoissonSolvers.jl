@@ -12,6 +12,18 @@ the tags. That gap is deliberate, and is named rather than
 reconstructed, because a changelog assembled after the fact loses exactly the reasoning that
 makes it worth keeping. The record proper begins with the section below.
 
+## [Unreleased] — targeting 0.7.1
+
+### Changed
+
+- **SimpleSplines 0.5 is supported alongside 0.2, 0.3 and 0.4.** Compat only:
+  `SimpleSplines = "0.2, 0.3, 0.4, 0.5"`. No name or method of PoissonSolvers changes.
+  SimpleSplines 0.5 throws an `ArgumentError` for a mesh that 0.4 built silently and wrong: an
+  overflowing domain length, or breakpoints that are not finite and strictly increasing. It also
+  fixes the derivatives of a periodic basis at the seam for `ForwardDiff.Dual` arguments, and the
+  double count just below the right end of the domain in a periodic evaluation. A periodic spline
+  solution reaches the last fix through the `Spline` it is.
+
 ## [0.7.0] — 2026-11-14
 
 ### Breaking Changes
